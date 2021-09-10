@@ -72,9 +72,6 @@ sl_power_manager_on_isr_exit_t app_sleep_on_isr_exit(void)
 
 #endif // defined(SL_CATALOG_POWER_MANAGER_PRESENT)
 
-
-
-
 /**************************************************************************//**
  * Application Init.
  *****************************************************************************/
@@ -84,11 +81,30 @@ SL_WEAK void app_init(void)
   // This is called once during start-up.
   // Don't call any Bluetooth API functions until after the boot event.
 
+  //set requirements for energy mode EM1 and EM2
+  if(LOWEST_ENERGY_MODE == 1) {
+      sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
+  }
+  else if(LOWEST_ENERGY_MODE == 2) {
+      sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
+  }
 
-  // Student Edit: Add a call to gpioInit() here
-  
+  //initialize GPIO module
+  gpioInit();
+  gpioLed0SetOff();
 
+  //initialize oscillator
+  oscillator_init();
 
+  //initialize timer
+  mytimer_init();
+
+  //enable underflow and COMP1 interrupt of timer peripheral
+  LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF | LETIMER_IEN_COMP1);
+
+  //enable interrupt for LETIMER0 in NVIC
+  NVIC_ClearPendingIRQ(LETIMER0_IRQn);
+  NVIC_EnableIRQ(LETIMER0_IRQn);
 
 }
 
@@ -99,7 +115,7 @@ SL_WEAK void app_init(void)
  * comment out this function. Wait loops are a bad idea in general.
  * We'll discuss how to do this a better way in the next assignment.
  *****************************************************************************/
-static void delayApprox(int delay)
+/*static void delayApprox(int delay)
 {
   volatile int i;
 
@@ -108,6 +124,7 @@ static void delayApprox(int delay)
   }
 
 } // delayApprox()
+*/
 
 
 
@@ -123,15 +140,8 @@ SL_WEAK void app_process_action(void)
   //         We will create/use a scheme that is far more energy efficient in
   //         later assignments.
 
-  delayApprox(3500000);
+  //Nothing to do
 
-  gpioLed0SetOn();
-  //gpioLed1SetOn();
-
-  delayApprox(3500000);
-
-  gpioLed0SetOff();
-  //gpioLed1SetOff();
 
 }
 

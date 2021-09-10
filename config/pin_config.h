@@ -14,6 +14,11 @@
 // [CMU]$
 
 // $[DBG]
+// DBG SWV on PF2
+#define DBG_SWV_PORT                             gpioPortF
+#define DBG_SWV_PIN                              2
+#define DBG_SWV_LOC                              0
+
 // [DBG]$
 
 // $[ETM]

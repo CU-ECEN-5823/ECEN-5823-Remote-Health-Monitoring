@@ -115,6 +115,24 @@
           <file name="mpu_armv7.h" linked="false" uri="studio:/sdk/platform/CMSIS/Include/mpu_armv7.h"/>
         </folder>
       </folder>
+      <folder name="driver">
+        <folder name="debug">
+          <folder name="src">
+            <file name="sl_debug_swo.c" linked="false" uri="studio:/sdk/platform/driver/debug/src/sl_debug_swo.c"/>
+          </folder>
+          <folder name="inc">
+            <file name="sl_debug_swo.h" linked="false" uri="studio:/sdk/platform/driver/debug/inc/sl_debug_swo.h"/>
+          </folder>
+        </folder>
+        <folder name="i2cspm">
+          <folder name="src">
+            <file name="sl_i2cspm.c" linked="false" uri="studio:/sdk/platform/driver/i2cspm/src/sl_i2cspm.c"/>
+          </folder>
+          <folder name="inc">
+            <file name="sl_i2cspm.h" linked="false" uri="studio:/sdk/platform/driver/i2cspm/inc/sl_i2cspm.h"/>
+          </folder>
+        </folder>
+      </folder>
       <folder name="service">
         <folder name="device_init">
           <folder name="inc">
@@ -269,16 +287,6 @@
           <file name="em_rtcc.c" linked="false" uri="studio:/sdk/platform/emlib/src/em_rtcc.c"/>
           <file name="em_system.c" linked="false" uri="studio:/sdk/platform/emlib/src/em_system.c"/>
           <file name="em_usart.c" linked="false" uri="studio:/sdk/platform/emlib/src/em_usart.c"/>
-        </folder>
-      </folder>
-      <folder name="driver">
-        <folder name="i2cspm">
-          <folder name="src">
-            <file name="sl_i2cspm.c" linked="false" uri="studio:/sdk/platform/driver/i2cspm/src/sl_i2cspm.c"/>
-          </folder>
-          <folder name="inc">
-            <file name="sl_i2cspm.h" linked="false" uri="studio:/sdk/platform/driver/i2cspm/inc/sl_i2cspm.h"/>
-          </folder>
         </folder>
       </folder>
       <folder name="radio">
@@ -643,7 +651,7 @@
   <file name="readme_img2.png" linked="false" uri="studio:/project/readme_img2.png"/>
   <file name="readme_img3.png" linked="false" uri="studio:/project/readme_img3.png"/>
   <file name="readme_img4.png" linked="false" uri="studio:/project/readme_img4.png"/>
-  <file name="readme.html" linked="false" uri="studio:/sdk/app/bluetooth/documentation/example/soc_empty/readme.html"/>
+  <file name="readme.html" linked="false" uri="file:/C:/Applications/Simplicity%20Studio.app/Contents/Eclipse/developer/sdks/gecko_sdk_suite/v3.2/app/bluetooth/documentation/example/soc_empty/readme.html"/>
   <includePath uri="studio:/project/"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/Device/SiliconLabs/EFR32BG13P/Include"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/app/common/util/app_assert"/>
@@ -654,6 +662,7 @@
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/bootloader"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/bootloader/api"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/CMSIS/Include"/>
+  <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/driver/debug/inc"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/service/device_init/inc"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/middleware/glib/dmd"/>
   <includePath uri="studio:/project/gecko_sdk_3.2.1/platform/middleware/glib"/>
