@@ -25,10 +25,8 @@
 #define LED0_pin   4
 #define LED1_port  gpioPortF
 #define LED1_pin   5
-
-
-
-
+#define sensor_port gpioPortD
+#define sensor_pin  15
 
 
 
@@ -38,7 +36,8 @@ void gpioLed0SetOn();
 void gpioLed0SetOff();
 void gpioLed1SetOn();
 void gpioLed1SetOff();
-
+void enable_sensor();
+void disable_sensor();
 
 
 

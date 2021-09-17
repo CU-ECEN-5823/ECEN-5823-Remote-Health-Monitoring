@@ -42,8 +42,11 @@
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
 
-
-
+enum {
+  evtNoEvent = 0,
+  evtLETIMER0_UF = 1,
+  evtReadTemperature = 2,
+};
 
 /*****************************************************************************
  * Application Power Manager callbacks
@@ -80,18 +83,8 @@ SL_WEAK void app_init(void)
   // Put your application 1-time init code here
   // This is called once during start-up.
   // Don't call any Bluetooth API functions until after the boot event.
-
-  //set requirements for energy mode EM1 and EM2
-  if(LOWEST_ENERGY_MODE == 1) {
-      sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
-  }
-  else if(LOWEST_ENERGY_MODE == 2) {
-      sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
-  }
-
   //initialize GPIO module
   gpioInit();
-  gpioLed0SetOff();
 
   //initialize oscillator
   oscillator_init();
@@ -99,32 +92,16 @@ SL_WEAK void app_init(void)
   //initialize timer
   mytimer_init();
 
+  i2c_init();
+
   //enable underflow and COMP1 interrupt of timer peripheral
-  LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF | LETIMER_IEN_COMP1);
+  LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF);
 
   //enable interrupt for LETIMER0 in NVIC
   NVIC_ClearPendingIRQ(LETIMER0_IRQn);
   NVIC_EnableIRQ(LETIMER0_IRQn);
 
 }
-
-
-/*****************************************************************************
- * delayApprox(), private to this file.
- * A value of 3500000 is ~ 1 second. After assignment 1 you can delete or
- * comment out this function. Wait loops are a bad idea in general.
- * We'll discuss how to do this a better way in the next assignment.
- *****************************************************************************/
-/*static void delayApprox(int delay)
-{
-  volatile int i;
-
-  for (i = 0; i < delay; ) {
-      i=i+1;
-  }
-
-} // delayApprox()
-*/
 
 
 
@@ -141,7 +118,23 @@ SL_WEAK void app_process_action(void)
   //         later assignments.
 
   //Nothing to do
+  uint32_t evt;
+  evt = getNextEvent();
+  switch (evt) {
+    case evtLETIMER0_UF:
+      read_temp_from_si7021();
+      break;
 
+    default:
+      break;
+  } // switch
+
+  /*gpioLed0SetOn();
+  LOG_INFO("LED on\n\r");
+  timerWaitUs(500000);
+  gpioLed0SetOff();
+  LOG_INFO("LED off\n\r");
+  timerWaitUs(500000);*/
 
 }
 
@@ -156,7 +149,7 @@ SL_WEAK void app_process_action(void)
  *****************************************************************************/
 void sl_bt_on_event(sl_bt_msg_t *evt)
 {
-  
+
   // Just a trick to hide a compiler warning about unused input parameter evt.
   // We will add real functionality here later.
   if (evt->header) {
@@ -170,8 +163,8 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
   // sequence through states driven by events
   // state_machine(evt);    // put this code in scheduler.c/.h
-  
-  
-   
+
+
+
 } // sl_bt_on_event()
 

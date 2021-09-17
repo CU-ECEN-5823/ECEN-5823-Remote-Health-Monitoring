@@ -13,7 +13,9 @@
 
 
 
-#include "gpio.h"
+#include "src/gpio.h"
+#include "app.h"
+#include "main.h"
 
 
 
@@ -33,7 +35,8 @@ void gpioInit()
 	GPIO_DriveStrengthSet(LED1_port, gpioDriveStrengthWeakAlternateWeak);
 	GPIO_PinModeSet(LED1_port, LED1_pin, gpioModePushPull, false);
 
-
+  GPIO_DriveStrengthSet(sensor_port, gpioDriveStrengthWeakAlternateWeak);
+  GPIO_PinModeSet(sensor_port, sensor_pin, gpioModePushPull, false);
 
 } // gpioInit()
 
@@ -59,6 +62,14 @@ void gpioLed1SetOn()
 void gpioLed1SetOff()
 {
 	GPIO_PinOutClear(LED1_port,LED1_pin);
+}
+
+void enable_sensor() {
+  GPIO_PinOutSet(sensor_port, sensor_pin);
+}
+
+void disable_sensor() {
+  GPIO_PinOutClear(sensor_port, sensor_pin);
 }
 
 

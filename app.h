@@ -54,16 +54,11 @@
 #include "src/timers.h"
 #include "src/irq.h"
 #include "src/lcd.h"
-
-// #defines to select energy mode
-#define LOWEST_ENERGY_MODE 0
-//#define LOWEST_ENERGY_MODE 1
-//#define LOWEST_ENERGY_MODE 2
-//#define LOWEST_ENERGY_MODE 3
+#include "src/scheduler.h"
+#include "src/i2c.h"
 
 //set LED on time and period
-#define LETIMER_ON_TIME_MS 175
-#define LETIMER_PERIOD_MS  2250
+#define LETIMER_PERIOD_MS  3000
 
 
 // See: https://docs.silabs.com/gecko-platform/latest/service/power_manager/overview
@@ -78,15 +73,8 @@
 //   up the MCU from the call to sl_power_manager_sleep() in the main while (1)
 //   loop.
 // Students: We'll need to modify this for A2 onward.
-#if LOWEST_ENERGY_MODE == 0
-
-  #define APP_IS_OK_TO_SLEEP      (false)
-
-#else
-
   #define APP_IS_OK_TO_SLEEP      (true)
 
-#endif
 // Return values for app_sleep_on_isr_exit():
 //   SL_POWER_MANAGER_IGNORE; // The module did not trigger an ISR and it doesn't want to contribute to the decision
 //   SL_POWER_MANAGER_SLEEP;  // The module was the one that caused the system wakeup and the system SHOULD go back to sleep

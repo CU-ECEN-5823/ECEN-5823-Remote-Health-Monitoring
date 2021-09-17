@@ -18,4 +18,6 @@
 //Function to initialize LETIMER
 void mytimer_init();
 
+void timerWaitUs(uint32_t us_wait);
+
 #endif /* SRC_TIMERS_H_ */
