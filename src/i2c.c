@@ -120,7 +120,7 @@ void read_temp_from_si7021() {
   sensor_temp = convertTemp();
 
   //log temperature value
-  //LOG_INFO("Temp = %f C\n\r", sensor_temp);
+  LOG_INFO("Temp = %f C\n\r", sensor_temp);
 }
 
 
