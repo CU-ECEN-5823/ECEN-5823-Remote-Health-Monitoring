@@ -18,6 +18,7 @@
 //Function to initialize LETIMER
 void mytimer_init();
 
+//function for polling delay
 void timerWaitUs(uint32_t us_wait);
 
 #endif /* SRC_TIMERS_H_ */

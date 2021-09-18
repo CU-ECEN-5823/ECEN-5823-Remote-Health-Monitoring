@@ -16,11 +16,15 @@
 #include "src/timers.h"
 
 #define ACTUAL_CLK_FREQ select_oscillator()     //get actual clock frequency
-#define VALUE_TO_LOAD_COMP0 (LETIMER_PERIOD_MS*ACTUAL_CLK_FREQ)/1000      //calculate value to load in COMP0
+#define VALUE_TO_LOAD_COMP0 (LETIMER_PERIOD_MS*ACTUAL_CLK_FREQ)/1000     //calculate value to load in COMP0
 
-#define CLK_RES 61
-#define MIN_WAIT 60
-#define MAX_WAIT 3000001
+//resolution of LETIMER clock tick
+//#define CLK_RES 61
+//#define CLK_RES ((10^6)/ACTUAL_CLK_FREQ)
+//#define MIN_WAIT ((10^6)/ACTUAL_CLK_FREQ)       //minimum wait time possible
+#define CLK_RES 1000
+#define MIN_WAIT 1000
+#define MAX_WAIT 3000000  //maximum wait time possible
 
 //structure to define parameters for LETIMER
 const LETIMER_Init_TypeDef LETIMER_INIT_STRUCT = {
@@ -41,34 +45,54 @@ void mytimer_init() {
   LETIMER_Init(LETIMER0, &LETIMER_INIT_STRUCT);         //initialize LETIMER0 using values defined in the structure
   LETIMER_CompareSet(LETIMER0, 0, VALUE_TO_LOAD_COMP0); //Set value of COMP0
   LETIMER_Enable(LETIMER0, true);                       //Enable LETIMER0
-  //LOG_INFO("Timer started\n\r");
+
+  //enable underflow interrupt of timer peripheral
+  LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF);
+
 }
 
 //blocks (polls) at least us_wait microseconds, using LETIMER0 tick counts as a reference
 void timerWaitUs(uint32_t us_wait) {
-  uint32_t desired_tick, current_cnt;
+  uint16_t desired_tick, current_cnt, required_cnt;
 
-  if((us_wait<=MIN_WAIT) | (us_wait>=MAX_WAIT)) {
+  //check function argument range
+  if((us_wait<(uint32_t)MIN_WAIT) | (us_wait>(uint32_t)MAX_WAIT)) {
       LOG_ERROR("TimerWait range\n\r");
+
+      //clamp wait time value
+      if(us_wait < (uint16_t)MIN_WAIT) {
+          us_wait = MIN_WAIT;
+      }
+
+      else if(us_wait > (uint16_t)MAX_WAIT) {
+          us_wait = MAX_WAIT;
+      }
   }
 
-  desired_tick = (us_wait/CLK_RES);
-  //LOG_INFO("TICKS=%ld\n\r", desired_tick);
+  desired_tick = (us_wait/CLK_RES);           //calculate required timer ticks
 
-  current_cnt = LETIMER_CounterGet(LETIMER0);
-  //LOG_INFO("curr_cnt=%ld\n\r", current_cnt);
+  current_cnt = LETIMER_CounterGet(LETIMER0); //get current LETIMER counter value
 
+  required_cnt = current_cnt-desired_tick;    //get required number of timer ticks
+
+  //wait time value wrap around case
+ /* if(required_cnt >= (uint16_t)VALUE_TO_LOAD_COMP0) {
+      required_cnt = 0xFFFF - required_cnt;
+
+      required_cnt = VALUE_TO_LOAD_COMP0 - required_cnt;
+  }*/
+
+  //poll until required time period passes
   if(current_cnt >= desired_tick) {
-      while((LETIMER_CounterGet(LETIMER0)) != (current_cnt-desired_tick));
+      while((LETIMER_CounterGet(LETIMER0)) != (required_cnt));
   }
 
+  //handle roll-over case
   else {
-      while((LETIMER_CounterGet(LETIMER0)) != (VALUE_TO_LOAD_COMP0-(desired_tick-current_cnt)));
+      //if required counter value is more than current counter value; wait till counter value is 0,
+      //    recalculate remaining required ticks and poll for that much time
+      while((LETIMER_CounterGet(LETIMER0)) != (uint32_t)(VALUE_TO_LOAD_COMP0-(desired_tick-current_cnt)));
   }
-
-  //LOG_INFO("cnt=%d\n\r", LETIMER_CounterGet(LETIMER0));
-
-  //LOG_INFO("Delay complete\n\r");
 
 }
 

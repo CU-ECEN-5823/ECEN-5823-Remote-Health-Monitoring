@@ -92,10 +92,13 @@ SL_WEAK void app_init(void)
   //initialize timer
   mytimer_init();
 
+  //initialize i2c peripheral
   i2c_init();
 
-  //enable underflow and COMP1 interrupt of timer peripheral
-  LETIMER_IntEnable(LETIMER0, LETIMER_IEN_UF);
+#if ((LOWEST_ENERGY_MODE > SL_POWER_MANAGER_EM0) && (LOWEST_ENERGY_MODE < SL_POWER_MANAGER_EM3))
+      LOG_INFO("Applying Pwr Mgr requirement of %d", (int) LOWEST_ENERGY_MODE);
+      sl_power_manager_add_em_requirement(LOWEST_ENERGY_MODE);
+#endif
 
   //enable interrupt for LETIMER0 in NVIC
   NVIC_ClearPendingIRQ(LETIMER0_IRQn);
@@ -117,12 +120,13 @@ SL_WEAK void app_process_action(void)
   //         We will create/use a scheme that is far more energy efficient in
   //         later assignments.
 
-  //Nothing to do
   uint32_t evt;
-  evt = getNextEvent();
+
+  evt = getNextEvent();         //get event to be executed from scheduler
+
   switch (evt) {
     case evtLETIMER0_UF:
-      read_temp_from_si7021();
+      read_temp_from_si7021();  //when underflow flag is set, get temperature measurement from sensor
       break;
 
     default:
@@ -130,10 +134,8 @@ SL_WEAK void app_process_action(void)
   } // switch
 
   /*gpioLed0SetOn();
-  LOG_INFO("LED on\n\r");
   timerWaitUs(500000);
   gpioLed0SetOff();
-  LOG_INFO("LED off\n\r");
   timerWaitUs(500000);*/
 
 }

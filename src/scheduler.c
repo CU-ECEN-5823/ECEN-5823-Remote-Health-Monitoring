@@ -4,6 +4,7 @@
  *  Created on: Sep 15, 2021
  *      Author: salon
  */
+
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
@@ -13,10 +14,10 @@
 
 uint32_t MyEvent;
 
+//enum to define scheduler events
 enum {
   evtNoEvent = 0,
   evtLETIMER0_UF = 1,
-  evtReadTemperature = 2,
 };
 
 // scheduler routine to set a scheduler event
@@ -47,5 +48,6 @@ uint32_t getNextEvent() {
   MyEvent = evtNoEvent;
   // exit critical section
   CORE_EXIT_CRITICAL();
+
   return (theEvent);
 } // getNextEvent()

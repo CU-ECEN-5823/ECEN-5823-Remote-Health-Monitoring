@@ -16,8 +16,10 @@
 #include "em_letimer.h"
 #include "main.h"
 
+//function to set a scheduler event
 void schedulerSetEventUF();
 
+//function to get scheduler event
 uint32_t getNextEvent();
 
 

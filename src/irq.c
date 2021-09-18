@@ -15,20 +15,11 @@
 
 void LETIMER0_IRQHandler(void) {
 
-  //CORE_DECLARE_IRQ_STATE;
-  //CORE_ENTER_CRITICAL();
-
   // determine pending interrupts in peripheral
   uint32_t reason = LETIMER_IntGetEnabled(LETIMER0);
   // clear pending interrupts in peripheral
   LETIMER_IntClear(LETIMER0, reason);
 
-  //CORE_EXIT_CRITICAL();
-
-  //logic to turn on led after 2075 ms and turn off after 2250 ms
-  //if(reason==4) {
-    schedulerSetEventUF();
-    //LOG_INFO("UF\n\r");
- // }
-
+  //set scheduler event
+  schedulerSetEventUF();
 }
