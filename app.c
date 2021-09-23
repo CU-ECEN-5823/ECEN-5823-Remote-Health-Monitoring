@@ -42,12 +42,6 @@
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
 
-enum {
-  evtNoEvent = 0,
-  evtLETIMER0_UF = 1,
-  evtReadTemperature = 2,
-};
-
 /*****************************************************************************
  * Application Power Manager callbacks
  *****************************************************************************/
@@ -92,12 +86,9 @@ SL_WEAK void app_init(void)
   //initialize timer
   mytimer_init();
 
-  //initialize i2c peripheral
-  i2c_init();
-
 #if ((LOWEST_ENERGY_MODE > SL_POWER_MANAGER_EM0) && (LOWEST_ENERGY_MODE < SL_POWER_MANAGER_EM3))
-      LOG_INFO("Applying Pwr Mgr requirement of %d", (int) LOWEST_ENERGY_MODE);
-      sl_power_manager_add_em_requirement(LOWEST_ENERGY_MODE);
+  LOG_INFO("Applying Pwr Mgr requirement of %d", (int) LOWEST_ENERGY_MODE);
+  sl_power_manager_add_em_requirement(LOWEST_ENERGY_MODE);
 #endif
 
   //enable interrupt for LETIMER0 in NVIC
@@ -123,15 +114,18 @@ SL_WEAK void app_process_action(void)
   uint32_t evt;
 
   evt = getNextEvent();         //get event to be executed from scheduler
+  //printf(".\n\r");
 
-  switch (evt) {
+  temperature_state_machine(evt);
+
+  /*switch (evt) {
     case evtLETIMER0_UF:
       read_temp_from_si7021();  //when underflow flag is set, get temperature measurement from sensor
       break;
 
     default:
       break;
-  } // switch
+  } // switch  */
 
   /*gpioLed0SetOn();
   timerWaitUs(500000);

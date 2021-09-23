@@ -19,11 +19,16 @@
 #define VALUE_TO_LOAD_COMP0 (LETIMER_PERIOD_MS*ACTUAL_CLK_FREQ)/1000     //calculate value to load in COMP0
 
 //resolution of LETIMER clock tick
-//#define CLK_RES 61
-//#define CLK_RES ((10^6)/ACTUAL_CLK_FREQ)
-//#define MIN_WAIT ((10^6)/ACTUAL_CLK_FREQ)       //minimum wait time possible
+
+#if (LOWEST_ENERGY_MODE < SL_POWER_MANAGER_EM3)
+#define CLK_RES 61
+#define MIN_WAIT 61
+
+#else
 #define CLK_RES 1000
 #define MIN_WAIT 1000
+#endif
+
 #define MAX_WAIT 3000000  //maximum wait time possible
 
 //structure to define parameters for LETIMER
@@ -52,7 +57,48 @@ void mytimer_init() {
 }
 
 //blocks (polls) at least us_wait microseconds, using LETIMER0 tick counts as a reference
-void timerWaitUs(uint32_t us_wait) {
+void timerWaitUs_interrupt(uint32_t us_wait) {
+  uint16_t desired_tick, current_cnt, required_cnt;
+
+  //check function argument range
+  if((us_wait<(uint32_t)MIN_WAIT) || (us_wait>(uint32_t)MAX_WAIT)) {
+      LOG_ERROR("TimerWait range\n\r");
+
+      //clamp wait time value
+      if(us_wait < (uint32_t)MIN_WAIT) {
+          us_wait = MIN_WAIT;
+      }
+
+      else if(us_wait > (uint32_t)MAX_WAIT) {
+          us_wait = MAX_WAIT;
+      }
+  }
+
+  desired_tick = (us_wait/CLK_RES);           //calculate required timer ticks
+
+  current_cnt = LETIMER_CounterGet(LETIMER0); //get current LETIMER counter value
+
+  if(current_cnt >= desired_tick) {
+      required_cnt = current_cnt-desired_tick;
+  }
+
+  //handle roll-over case
+  else {
+      //if required counter value is more than current counter value; wait till counter value is 0,
+      //    recalculate remaining required ticks and poll for that much time
+      required_cnt = (uint32_t)(VALUE_TO_LOAD_COMP0-(desired_tick-current_cnt));
+  }
+
+  LETIMER_CompareSet(LETIMER0, 1, required_cnt); //Set value of COMP1
+
+  //enable COMP1 interrupt of timer peripheral
+  LETIMER_IntEnable(LETIMER0, LETIMER_IEN_COMP1);
+
+}
+
+
+//blocks (polls) at least us_wait microseconds, using LETIMER0 tick counts as a reference
+void timerWaitUs_polled(uint32_t us_wait) {
   uint16_t desired_tick, current_cnt, required_cnt;
 
   //check function argument range
@@ -76,7 +122,7 @@ void timerWaitUs(uint32_t us_wait) {
   required_cnt = current_cnt-desired_tick;    //get required number of timer ticks
 
   //wait time value wrap around case
- /* if(required_cnt >= (uint16_t)VALUE_TO_LOAD_COMP0) {
+  /* if(required_cnt >= (uint16_t)VALUE_TO_LOAD_COMP0) {
       required_cnt = 0xFFFF - required_cnt;
 
       required_cnt = VALUE_TO_LOAD_COMP0 - required_cnt;

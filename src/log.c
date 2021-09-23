@@ -28,26 +28,26 @@
  */
 uint32_t loggerGetTimestamp()
 {
-    #ifdef MY_USE_SYSTICKS
-    
-       // Students: Look in the CMSIS library for systick routines. For debugging
-       //           purposes this can provide greater resolution than a timestamp based on
-       //           LETIMER0. Do not turn in any code that executes systick routines
-       //           as this may effect your energy measurements and your grade.
-       
-       // Develop this function if you so desire for debugging purposes only
-	   return getSysTicks();
-	   
-    #else
-    
-       // Students: You will eventually develop this function letimerMilliseconds()
-       //           and not return 0. This will be the function to call for your graded
-       //           assignments. Put this function in your irq.c/.h files.
-       
-       //return letimerMilliseconds();
-	   return (0);
-	   
-    #endif
+#ifdef MY_USE_SYSTICKS
+
+  // Students: Look in the CMSIS library for systick routines. For debugging
+  //           purposes this can provide greater resolution than a timestamp based on
+  //           LETIMER0. Do not turn in any code that executes systick routines
+  //           as this may effect your energy measurements and your grade.
+
+  // Develop this function if you so desire for debugging purposes only
+  return getSysTicks();
+
+#else
+
+  // Students: You will eventually develop this function letimerMilliseconds()
+  //           and not return 0. This will be the function to call for your graded
+  //           assignments. Put this function in your irq.c/.h files.
+
+  return letimerMilliseconds();
+  //return (0);
+
+#endif
 
 } // loggerGetTimestamp
 
@@ -62,7 +62,7 @@ uint32_t loggerGetTimestamp()
 void printSLErrorString(sl_status_t status) {
 
   char              buffer[128+1]; // 128 chars should be long enough,
-                                   // if not the string will truncated
+  // if not the string will truncated
   int32_t           result;
 
   // Attempt to convert the error code value into a string

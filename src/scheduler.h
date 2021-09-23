@@ -16,11 +16,17 @@
 #include "em_letimer.h"
 #include "main.h"
 
+void schedulerSetEventCOMP1();
+
+void schedulerSetEventTransferDone();
+
 //function to set a scheduler event
 void schedulerSetEventUF();
 
 //function to get scheduler event
 uint32_t getNextEvent();
+
+void temperature_state_machine(uint32_t event);
 
 
 #endif /* SRC_SCHEDULER_H_ */
