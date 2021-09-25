@@ -11,11 +11,7 @@
 #include "src/i2c.h"
 #include "app.h"
 
-#include "em_i2c.h"
-#include "main.h"
-
 #define SI7021_DEVICE_ADDR 0x40
-
 
 uint8_t cmd_data;
 uint8_t read_data[2];
@@ -45,6 +41,7 @@ void i2c_init() {
 
 //function to perform write command operation on slave
 void write_cmd() {
+
   I2C_TransferReturn_TypeDef transferStatus;
 
   i2c_init();
@@ -56,8 +53,10 @@ void write_cmd() {
   transfer_seq.buf[0].data = &cmd_data;
   transfer_seq.buf[0].len = sizeof(cmd_data);
 
+  //enable I2C interrupt
   NVIC_EnableIRQ(I2C0_IRQn);
 
+  //initialize I2C transfer
   transferStatus = I2C_TransferInit(I2C0, &transfer_seq);
 
   //check transfer function return status
@@ -68,6 +67,7 @@ void write_cmd() {
 
 //function to perform read operation from slave
 void read_cmd() {
+
   I2C_TransferReturn_TypeDef transferStatus;
 
   i2c_init();
@@ -78,8 +78,10 @@ void read_cmd() {
   transfer_seq.buf[0].data = &read_data[0];
   transfer_seq.buf[0].len = sizeof(read_data);
 
+  //enable I2C interrupt
   NVIC_EnableIRQ(I2C0_IRQn);
 
+  //initialize I2C transfer
   transferStatus = I2C_TransferInit(I2C0, &transfer_seq);
 
   //check transfer function return status
@@ -100,43 +102,3 @@ float convertTemp() {
   tempCelcius -= 46.85;
   return tempCelcius;
 }
-
-/*
-//This function will be called from app_process_action everytime LETIMER interrupt is serviced i.e., every 3 seconds
-//function to execute sequence for load power management and i2c communication with sensor
-void read_temp_from_si7021() {
-
-  float sensor_temp;
-
-  //enable temperature sensor
-  enable_sensor();
-
-  //wait for 90ms
-  timerWaitUs_interrupt(80000);
-
-  //initialize i2c peripheral
-  i2c_init();
-
-  //write command to slave to get temperature measurement
-  write_cmd();
-
-  //wait 12ms for measurement
-  timerWaitUs_interrupt(11000);
-
-  //initialize i2c peripheral
-  i2c_init();
-
-  //read temperature value from slave
-  read_cmd();
-
-  //disable sensor
-  disable_sensor();
-
-  //convert sensor data into temperature
-  sensor_temp = convertTemp();
-
-  //log temperature value
-  LOG_INFO("Temp = %f C\n\r", sensor_temp);
-} */
-
-

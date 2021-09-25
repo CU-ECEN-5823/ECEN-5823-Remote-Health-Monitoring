@@ -17,7 +17,7 @@ int rollover_cnt=0;
 
 uint32_t letimerMilliseconds() {
   uint32_t time_ms;
-  time_ms = (rollover_cnt*3000)+(3000-LETIMER_CounterGet(LETIMER0));
+  time_ms = (rollover_cnt*3000)+(VALUE_TO_LOAD_COMP0-LETIMER_CounterGet(LETIMER0));
   return time_ms;
 }
 
@@ -28,8 +28,8 @@ void LETIMER0_IRQHandler(void) {
   // clear pending interrupts in peripheral
   LETIMER_IntClear(LETIMER0, reason);
 
-  if(reason == 2) {
-      //LOG_INFO("got comp1 interrupt\n\r");
+  //check for COMP1 interrupt
+  if(reason & LETIMER_IF_COMP1) {
 
       //disable COMP1 interrupt of timer peripheral
       LETIMER_IntDisable(LETIMER0, LETIMER_IEN_COMP1);
@@ -38,8 +38,8 @@ void LETIMER0_IRQHandler(void) {
       schedulerSetEventCOMP1();
   }
 
-  else if(reason == 4) {
-      //LOG_INFO("got UF interrupt\n\r");
+  //check for UF interrupt
+  else if(reason & LETIMER_IF_UF) {
 
       //set scheduler event
       schedulerSetEventUF();
@@ -60,18 +60,23 @@ void I2C0_IRQHandler(void) {
 
   I2C_TransferReturn_TypeDef transferStatus;
 
+  //get I2C transfer status
   transferStatus = I2C_Transfer(I2C0);
 
+  //check if I2C transfer is done
   if(transferStatus == i2cTransferDone) {
 
+      //disable I2C transfer
       NVIC_DisableIRQ(I2C0_IRQn);
 
+      //set scheduler event
       schedulerSetEventTransferDone();
   }
 
   if(transferStatus < 0) {
 
-      LOG_ERROR("I2C_Transfer status %d : failed\n\r", (uint32_t)transferStatus);
+      LOG_ERROR("I2C_TStatus %d : failed\n\r", (uint32_t)transferStatus);
+
   }
 }
 

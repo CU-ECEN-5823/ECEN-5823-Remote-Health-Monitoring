@@ -39,6 +39,7 @@
 #define APP_H
 
 #include "stdio.h"
+#include "main.h"
 
 #include "em_common.h"
 #include "app_assert.h" // got messages that sl_app_assert() is deprecated and should switch to all_assert()

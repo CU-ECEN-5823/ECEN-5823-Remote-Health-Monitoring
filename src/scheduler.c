@@ -14,11 +14,12 @@
 
 uint32_t MyEvent;
 
+//enum for interrupt based events
 enum {
-  evt_NoEvent,
-  evt_TimerUF,
-  evt_COMP1,
-  evt_TransferDone
+  evt_NoEvent=0x00,
+  evt_TimerUF=0x01,
+  evt_COMP1=0x02,
+  evt_TransferDone=0x04
 };
 
 //enum to define scheduler events
@@ -39,12 +40,11 @@ void schedulerSetEventUF() {
   CORE_ENTER_CRITICAL();
 
   // set the event in your data structure, this is a read-modify-write
-  MyEvent = evt_TimerUF;
+  MyEvent |= evt_TimerUF;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
 
-  //LOG_INFO("event UF\n\r");
 } // schedulerSetEventXXX()
 
 // scheduler routine to set a scheduler event
@@ -55,12 +55,11 @@ void schedulerSetEventCOMP1() {
   CORE_ENTER_CRITICAL();
 
   // set the event in your data structure, this is a read-modify-write
-  MyEvent = evt_COMP1;
+  MyEvent |= evt_COMP1;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
 
-  //LOG_INFO("event COMP1\n\r");
 } // schedulerSetEventXXX()
 
 // scheduler routine to set a scheduler event
@@ -71,57 +70,62 @@ void schedulerSetEventTransferDone() {
   CORE_ENTER_CRITICAL();
 
   // set the event in your data structure, this is a read-modify-write
-  MyEvent = evt_TransferDone;
+  MyEvent |= evt_TransferDone;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
 
-  //LOG_INFO("event transfer\n\r");
 } // schedulerSetEventXXX()
 
 // scheduler routine to return 1 event to main()code and clear that event
 uint32_t getNextEvent() {
 
-  uint32_t theEvent;
+  static uint32_t theEvent=evt_NoEvent;
   //determine 1 event to return to main() code, apply priorities etc.
-  theEvent = MyEvent;
-
+  // clear the event in your data structure, this is a read-modify-write
   // enter critical section
   CORE_DECLARE_IRQ_STATE;
   CORE_ENTER_CRITICAL();
 
-  // clear the event in your data structure, this is a read-modify-write
-  MyEvent = evt_NoEvent;
+  if(MyEvent & evt_TimerUF) {
+      theEvent = evt_TimerUF;
+      MyEvent ^= evt_TimerUF;
+  }
+  else if(MyEvent & evt_COMP1) {
+      theEvent = evt_COMP1;
+      MyEvent ^= evt_COMP1;
+  }
+  else if(MyEvent & evt_TransferDone) {
+      theEvent = evt_TransferDone;
+      MyEvent ^= evt_TransferDone;
+  }
+
   // exit critical section
   CORE_EXIT_CRITICAL();
-
-  //printf("theEvent=%ld\n\r",theEvent);
 
   return (theEvent);
 } // getNextEvent()
 
+//state machine to be executed
 void temperature_state_machine(uint32_t event) {
-
-  //LOG_INFO("in FSM\n\r");
 
   my_state currentState;
   static my_state nextState = state0_idle;
 
-  currentState = nextState;
+  currentState = nextState;     //set current state of the process
 
   switch(currentState) {
 
     case state0_idle:
       nextState = state0_idle;          //default
-      //LOG_INFO("In idle\n\r");
 
-      if(event == evt_TimerUF) {
-          LOG_INFO("got timer overflow\n\r");
+      //check for underflow event
+      if(event & evt_TimerUF) {
 
           //enable temperature sensor
           enable_sensor();
 
-          //wait for 80ms
+          //wait for 80ms for sensor to power on
           timerWaitUs_interrupt(80000);
           nextState = state1_timer_wait;
       }
@@ -130,13 +134,14 @@ void temperature_state_machine(uint32_t event) {
 
     case state1_timer_wait:
       nextState = state1_timer_wait;    //default
-      //LOG_INFO("in timer wait\n\r");
 
-      if(event == evt_COMP1) {
-          LOG_INFO("got comp1 after power on wait\n\r");
+      //check for COMP1 event after timerwait
+      if(event & evt_COMP1) {
 
+          //send write command to slave
           write_cmd();
 
+          //set the processor in EM1 energy mode
           sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
           nextState = state2_write_cmd;
@@ -146,15 +151,15 @@ void temperature_state_machine(uint32_t event) {
 
     case state2_write_cmd:
       nextState = state2_write_cmd;     //default
-      //LOG_INFO("in write cmd\n\r");
 
-      if(event == evt_TransferDone) {
-          LOG_INFO("write command transfer done\n\r");
+      //check for I2C transfer complete event after writing command to slave
+      if(event & evt_TransferDone) {
 
+          //remove processor from EM1 energy mode
           sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
 
-          //wait 12ms for measurement
-          timerWaitUs_interrupt(11000);
+          //wait 10.8ms for measurement of temperature
+          timerWaitUs_interrupt(10800);
 
           nextState = state3_write_wait;
       }
@@ -163,13 +168,14 @@ void temperature_state_machine(uint32_t event) {
 
     case state3_write_wait:
       nextState = state3_write_wait;    //default
-      //LOG_INFO("in write wait\n\r");
 
-      if(event == evt_COMP1) {
-          LOG_INFO("got comp1 after write wait\n\r");
+      //check for COMP1 event after timerwait
+      if(event & evt_COMP1) {
 
+          //read data from sensor
           read_cmd();
 
+          //set the processor in EM1 energy mode
           sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
           nextState = state4_read;
@@ -179,20 +185,18 @@ void temperature_state_machine(uint32_t event) {
 
     case state4_read:
       nextState = state4_read;          //default
-      //LOG_INFO("in read\n\r");
 
-      if(event == evt_TransferDone) {
-          LOG_INFO("read command transfer done\n\r");
+      //check for I2C transfer complete event after reading data from slave
+      if(event & evt_TransferDone) {
 
+          //remove processor from EM1 energy mode
           sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
 
+          //disable si7021 sensor
           disable_sensor();
 
           //disable I2C interrupt
           NVIC_DisableIRQ(I2C0_IRQn);
-
-          //convert sensor data into temperature
-          //sensor_temp = convertTemp();
 
           //log temperature value
           LOG_INFO("Temp = %f C\n\r", convertTemp());

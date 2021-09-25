@@ -8,16 +8,18 @@
 #ifndef SRC_TIMERS_H_
 #define SRC_TIMERS_H_
 
-#include "src/timers.h"
 #include "src/oscillators.h"
 #include "app.h"
 
 #include "em_letimer.h"
-#include "main.h"
+
+#define ACTUAL_CLK_FREQ select_oscillator()     //get actual clock frequency
+#define VALUE_TO_LOAD_COMP0 (LETIMER_PERIOD_MS*ACTUAL_CLK_FREQ)/1000     //calculate value to load in COMP0
 
 //Function to initialize LETIMER
 void mytimer_init();
 
+//function for interrupt based delay
 void timerWaitUs_interrupt(uint32_t us_wait);
 
 //function for polling delay

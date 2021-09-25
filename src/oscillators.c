@@ -42,8 +42,8 @@ void oscillator_init() {
       CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_ULFRCO); //select ULFRCO oscillator for low frequency peripheral branch
       CMU_ClockDivSet(cmuClock_LETIMER0, cmuClkDiv_1);    //set prescaler for LETIMER0 peripheral
       CMU_ClockEnable(cmuClock_LETIMER0, true);           //enable clock for LETIMER0 peripheral
-      CMU_ClockFreqGet(cmuClock_LFA);                     //get clock frequency for low frequency branch
-      CMU_ClockFreqGet(cmuClock_LETIMER0);                //get clock frequency for LETIMER
+      //CMU_ClockFreqGet(cmuClock_LFA);                     //get clock frequency for low frequency branch
+      //CMU_ClockFreqGet(cmuClock_LETIMER0);                //get clock frequency for LETIMER
   }
 
   //clock set for EM0, EM1 and EM2 energy modes
@@ -52,8 +52,8 @@ void oscillator_init() {
       CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_LFXO);   //select LFXO oscillator for low frequency peripheral branch
       CMU_ClockDivSet(cmuClock_LETIMER0, cmuClkDiv_2);    //set prescaler for LETIMER0 peripheral
       CMU_ClockEnable(cmuClock_LETIMER0, true);           //enable clock for LETIMER0 peripheral
-      CMU_ClockFreqGet(cmuClock_LFA);                     //get clock frequency for low frequency branch
-      CMU_ClockFreqGet(cmuClock_LETIMER0);                //get clock frequency for LETIMER
+      //CMU_ClockFreqGet(cmuClock_LFA);                     //get clock frequency for low frequency branch
+      //CMU_ClockFreqGet(cmuClock_LETIMER0);                //get clock frequency for LETIMER
   }
 
 }

@@ -114,18 +114,8 @@ SL_WEAK void app_process_action(void)
   uint32_t evt;
 
   evt = getNextEvent();         //get event to be executed from scheduler
-  //printf(".\n\r");
 
   temperature_state_machine(evt);
-
-  /*switch (evt) {
-    case evtLETIMER0_UF:
-      read_temp_from_si7021();  //when underflow flag is set, get temperature measurement from sensor
-      break;
-
-    default:
-      break;
-  } // switch  */
 
   /*gpioLed0SetOn();
   timerWaitUs(500000);

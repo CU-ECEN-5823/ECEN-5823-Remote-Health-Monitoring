@@ -12,15 +12,11 @@
 #include "src/log.h"
 
 #include "app.h"
-#include "main.h"
 #include "src/timers.h"
-
-#define ACTUAL_CLK_FREQ select_oscillator()     //get actual clock frequency
-#define VALUE_TO_LOAD_COMP0 (LETIMER_PERIOD_MS*ACTUAL_CLK_FREQ)/1000     //calculate value to load in COMP0
 
 //resolution of LETIMER clock tick
 
-#if (LOWEST_ENERGY_MODE < SL_POWER_MANAGER_EM3)
+#if (LOWEST_ENERGY_MODE < 3)
 #define CLK_RES 61
 #define MIN_WAIT 61
 
@@ -34,7 +30,7 @@
 //structure to define parameters for LETIMER
 const LETIMER_Init_TypeDef LETIMER_INIT_STRUCT = {
     false,              /* Disable timer when initialization completes. */
-    false,              /* Stop counter during debug halt. */
+    true,              /* Allow counter to run during debug halt. */
     true,               /* load COMP0 into CNT on underflow. */
     false,              /* Do not load COMP1 into COMP0 when REP0 reaches 0. */
     0,                  /* Idle value 0 for output 0. */
@@ -56,7 +52,7 @@ void mytimer_init() {
 
 }
 
-//blocks (polls) at least us_wait microseconds, using LETIMER0 tick counts as a reference
+//interrupt based delay of at least us_wait microseconds, using LETIMER0 tick counts as a reference
 void timerWaitUs_interrupt(uint32_t us_wait) {
   uint16_t desired_tick, current_cnt, required_cnt;
 
@@ -78,21 +74,22 @@ void timerWaitUs_interrupt(uint32_t us_wait) {
 
   current_cnt = LETIMER_CounterGet(LETIMER0); //get current LETIMER counter value
 
-  if(current_cnt >= desired_tick) {
-      required_cnt = current_cnt-desired_tick;
-  }
+  required_cnt = current_cnt-desired_tick;    //get required
 
   //handle roll-over case
-  else {
+  if(required_cnt > VALUE_TO_LOAD_COMP0) {
+
       //if required counter value is more than current counter value; wait till counter value is 0,
       //    recalculate remaining required ticks and poll for that much time
-      required_cnt = (uint32_t)(VALUE_TO_LOAD_COMP0-(desired_tick-current_cnt));
+      required_cnt = VALUE_TO_LOAD_COMP0 - (0xFFFF - required_cnt);
   }
 
   LETIMER_CompareSet(LETIMER0, 1, required_cnt); //Set value of COMP1
 
   //enable COMP1 interrupt of timer peripheral
   LETIMER_IntEnable(LETIMER0, LETIMER_IEN_COMP1);
+
+  LETIMER0->IEN |= LETIMER_IEN_COMP1;
 
 }
 

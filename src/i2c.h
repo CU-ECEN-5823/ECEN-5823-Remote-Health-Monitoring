@@ -19,14 +19,16 @@
 #include "em_i2c.h"
 #include "main.h"
 
+//function to initialize I2C peripheral
 void i2c_init();
 
+//function to convert data in temperature value
 float convertTemp();
 
+//function to write a command to slave
 void write_cmd();
 
+//function to read temperature from sensor
 void read_cmd();
-
-void read_temp_from_si7021();
 
 #endif /* SRC_I2C_H_ */
