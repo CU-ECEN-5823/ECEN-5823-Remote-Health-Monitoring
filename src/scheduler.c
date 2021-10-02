@@ -16,10 +16,11 @@ uint32_t MyEvent;
 
 //enum for interrupt based events
 enum {
-  evt_NoEvent=0x00,
-  evt_TimerUF=0x01,
-  evt_COMP1=0x02,
-  evt_TransferDone=0x04
+  evt_NoEvent,
+  evt_TimerUF,
+  evt_COMP1,
+  evt_TransferDone,
+  evt_I2CRetry
 };
 
 //enum to define scheduler events
@@ -39,8 +40,9 @@ void schedulerSetEventUF() {
   CORE_DECLARE_IRQ_STATE;
   CORE_ENTER_CRITICAL();
 
+  sl_bt_external_signal(evt_TimerUF);
   // set the event in your data structure, this is a read-modify-write
-  MyEvent |= evt_TimerUF;
+  //MyEvent |= evt_TimerUF;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -54,8 +56,9 @@ void schedulerSetEventCOMP1() {
   CORE_DECLARE_IRQ_STATE;
   CORE_ENTER_CRITICAL();
 
+  sl_bt_external_signal(evt_COMP1);
   // set the event in your data structure, this is a read-modify-write
-  MyEvent |= evt_COMP1;
+  //MyEvent |= evt_COMP1;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -69,8 +72,24 @@ void schedulerSetEventTransferDone() {
   CORE_DECLARE_IRQ_STATE;
   CORE_ENTER_CRITICAL();
 
+  sl_bt_external_signal(evt_TransferDone);
   // set the event in your data structure, this is a read-modify-write
-  MyEvent |= evt_TransferDone;
+  //MyEvent |= evt_TransferDone;
+
+  // exit critical section
+  CORE_EXIT_CRITICAL();
+
+} // schedulerSetEventXXX()
+
+void schedulerSetEventI2CRetry() {
+
+  // enter critical section
+  CORE_DECLARE_IRQ_STATE;
+  CORE_ENTER_CRITICAL();
+
+  sl_bt_external_signal(evt_I2CRetry);
+  // set the event in your data structure, this is a read-modify-write
+  //MyEvent |= evt_TransferDone;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -107,7 +126,7 @@ uint32_t getNextEvent() {
 } // getNextEvent()
 
 //state machine to be executed
-void temperature_state_machine(uint32_t event) {
+void temperature_state_machine(sl_bt_msg_t *evt) {
 
   my_state currentState;
   static my_state nextState = state0_idle;
@@ -120,8 +139,9 @@ void temperature_state_machine(uint32_t event) {
       nextState = state0_idle;          //default
 
       //check for underflow event
-      if(event & evt_TimerUF) {
+      if(evt->data.evt_system_external_signal.extsignals == evt_TimerUF) {
 
+          //LOG_INFO("timerUF event\n\r");
           //enable temperature sensor
           enable_sensor();
 
@@ -136,13 +156,16 @@ void temperature_state_machine(uint32_t event) {
       nextState = state1_timer_wait;    //default
 
       //check for COMP1 event after timerwait
-      if(event & evt_COMP1) {
+      if(evt->data.evt_system_external_signal.extsignals == evt_COMP1) {
+
+          //LOG_INFO("Comp1 event\n\r");
+
+          sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM2);
+          //set the processor in EM1 energy mode
+          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
           //send write command to slave
           write_cmd();
-
-          //set the processor in EM1 energy mode
-          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
           nextState = state2_write_cmd;
       }
@@ -153,15 +176,22 @@ void temperature_state_machine(uint32_t event) {
       nextState = state2_write_cmd;     //default
 
       //check for I2C transfer complete event after writing command to slave
-      if(event & evt_TransferDone) {
+      if(evt->data.evt_system_external_signal.extsignals == evt_TransferDone) {
 
+          //LOG_INFO("write transfer done\n\r");
           //remove processor from EM1 energy mode
           sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
+          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
 
           //wait 10.8ms for measurement of temperature
           timerWaitUs_interrupt(10800);
 
           nextState = state3_write_wait;
+      }
+
+      else if(evt->data.evt_system_external_signal.extsignals == evt_I2CRetry) {
+
+          write_cmd();
       }
 
       break;
@@ -170,11 +200,12 @@ void temperature_state_machine(uint32_t event) {
       nextState = state3_write_wait;    //default
 
       //check for COMP1 event after timerwait
-      if(event & evt_COMP1) {
+      if(evt->data.evt_system_external_signal.extsignals == evt_COMP1) {
 
           //read data from sensor
           read_cmd();
 
+          sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM2);
           //set the processor in EM1 energy mode
           sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
@@ -187,10 +218,12 @@ void temperature_state_machine(uint32_t event) {
       nextState = state4_read;          //default
 
       //check for I2C transfer complete event after reading data from slave
-      if(event & evt_TransferDone) {
+      if(evt->data.evt_system_external_signal.extsignals == evt_TransferDone) {
 
+          //LOG_INFO("read transfer  done\n\r");
           //remove processor from EM1 energy mode
           sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
+          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
 
           //disable si7021 sensor
           disable_sensor();
@@ -200,6 +233,8 @@ void temperature_state_machine(uint32_t event) {
 
           //log temperature value
           LOG_INFO("Temp = %f C\n\r", convertTemp());
+
+          ble_SendTemp();
 
           nextState = state0_idle;
       }

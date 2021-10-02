@@ -17,7 +17,7 @@ int rollover_cnt=0;
 
 uint32_t letimerMilliseconds() {
   uint32_t time_ms;
-  time_ms = (rollover_cnt*3000)+(VALUE_TO_LOAD_COMP0-LETIMER_CounterGet(LETIMER0));
+  time_ms = (rollover_cnt*3000)+((VALUE_TO_LOAD_COMP0-LETIMER_CounterGet(LETIMER0))/16);
   return time_ms;
 }
 
@@ -76,6 +76,7 @@ void I2C0_IRQHandler(void) {
   if(transferStatus < 0) {
 
       LOG_ERROR("I2C_TStatus %d : failed\n\r", (uint32_t)transferStatus);
+      schedulerSetEventI2CRetry();
 
   }
 }

@@ -86,9 +86,17 @@ SL_WEAK void app_init(void)
   //initialize timer
   mytimer_init();
 
-#if ((LOWEST_ENERGY_MODE > SL_POWER_MANAGER_EM0) && (LOWEST_ENERGY_MODE < SL_POWER_MANAGER_EM3))
-  LOG_INFO("Applying Pwr Mgr requirement of %d", (int) LOWEST_ENERGY_MODE);
-  sl_power_manager_add_em_requirement(LOWEST_ENERGY_MODE);
+#if (LOWEST_ENERGY_MODE > 2)
+      LOG_INFO("Lowest Energy mode possible is EM2, changing to EM2");
+      LOWEST_ENERGY_MODE = 2;
+#endif
+
+#if ((LOWEST_ENERGY_MODE > 0) & (LOWEST_ENERGY_MODE < 3))
+  LOG_INFO("Applying Pwr Mgr requirement of %d\n\r", (int) LOWEST_ENERGY_MODE);
+  if(LOWEST_ENERGY_MODE == 2)
+    sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
+  else if(LOWEST_ENERGY_MODE == 1)
+    sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 #endif
 
   //enable interrupt for LETIMER0 in NVIC
@@ -111,11 +119,11 @@ SL_WEAK void app_process_action(void)
   //         We will create/use a scheme that is far more energy efficient in
   //         later assignments.
 
-  uint32_t evt;
+  //uint32_t evt;
 
-  evt = getNextEvent();         //get event to be executed from scheduler
+  //evt = getNextEvent();         //get event to be executed from scheduler
 
-  temperature_state_machine(evt);
+  //temperature_state_machine(evt);
 
   /*gpioLed0SetOn();
   timerWaitUs(500000);
@@ -138,17 +146,17 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
   // Just a trick to hide a compiler warning about unused input parameter evt.
   // We will add real functionality here later.
-  if (evt->header) {
+  /*if (evt->header) {
       printf(".\n");
-  }
+  }*/
 
   // Some events require responses from our application code,
   // and don’t necessarily advance our state machines.
   // For assignment 5 uncomment the next 2 function calls
-  // handle_ble_event(evt); // put this code in ble.c/.h
+     handle_ble_event(evt); // put this code in ble.c/.h
 
   // sequence through states driven by events
-  // state_machine(evt);    // put this code in scheduler.c/.h
+     temperature_state_machine(evt);    // put this code in scheduler.c/.h
 
 
 

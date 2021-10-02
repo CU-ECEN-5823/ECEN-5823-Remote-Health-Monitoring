@@ -48,6 +48,7 @@
 #include "gatt_db.h"
 
 #include "sl_status.h" // for sl_status_print()
+#include "sl_bt_api.h"
 
 #include "src/ble_device_type.h"
 #include "src/gpio.h"
@@ -57,12 +58,13 @@
 #include "src/lcd.h"
 #include "src/scheduler.h"
 #include "src/i2c.h"
+#include "src/ble.h"
 
 // #defines to select energy mode
 //#define LOWEST_ENERGY_MODE 0
 //#define LOWEST_ENERGY_MODE 1
-//#define LOWEST_ENERGY_MODE 2
-#define LOWEST_ENERGY_MODE 3
+#define LOWEST_ENERGY_MODE 2
+//#define LOWEST_ENERGY_MODE 3
 
 //set timer period
 #define LETIMER_PERIOD_MS  3000

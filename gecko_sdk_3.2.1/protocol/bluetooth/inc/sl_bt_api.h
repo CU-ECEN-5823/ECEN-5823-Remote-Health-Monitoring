@@ -3367,7 +3367,7 @@ sl_status_t sl_bt_connection_open(bd_addr address,
  *     parameters are applied on the connection.
  *
  ******************************************************************************/
-sl_status_t sl_bt_connection_set_parameters(uint8_t connection,
+sl_status_t  sl_bt_connection_set_parameters(uint8_t connection,
                                             uint16_t min_interval,
                                             uint16_t max_interval,
                                             uint16_t latency,

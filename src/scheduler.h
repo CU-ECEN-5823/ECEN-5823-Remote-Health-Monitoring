@@ -23,11 +23,13 @@ void schedulerSetEventCOMP1();
 
 void schedulerSetEventTransferDone();
 
+void schedulerSetEventI2CRetry();
+
 //function to get scheduler event
 uint32_t getNextEvent();
 
 //state machine function
-void temperature_state_machine(uint32_t event);
+void temperature_state_machine(sl_bt_msg_t *evt);
 
 
 #endif /* SRC_SCHEDULER_H_ */
