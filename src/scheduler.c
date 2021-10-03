@@ -133,119 +133,120 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
   my_state currentState;
   static my_state nextState = state0_idle;
 
-  if(SL_BT_MSG_ID(evt->header)==sl_bt_evt_system_external_signal_id && connection_data.connected==true && connection_data.indication==true) {
+  if((SL_BT_MSG_ID(evt->header)==sl_bt_evt_system_external_signal_id) && (connection_data.connected==true) && (connection_data.indication==true)) {
 
-  currentState = nextState;     //set current state of the process
+      currentState = nextState;     //set current state of the process
 
-  switch(currentState) {
+      switch(currentState) {
 
-    case state0_idle:
-      nextState = state0_idle;          //default
+        case state0_idle:
+          nextState = state0_idle;          //default
 
-      //check for underflow event
-      if(evt->data.evt_system_external_signal.extsignals == evt_TimerUF) {
+          //check for underflow event
+          if(evt->data.evt_system_external_signal.extsignals == evt_TimerUF) {
 
-          //LOG_INFO("timerUF event\n\r");
-          //enable temperature sensor
-          enable_sensor();
+              //LOG_INFO("timerUF event\n\r");
+              //enable temperature sensor
+              enable_sensor();
 
-          //wait for 80ms for sensor to power on
-          timerWaitUs_interrupt(80000);
-          nextState = state1_timer_wait;
+              //wait for 80ms for sensor to power on
+              timerWaitUs_interrupt(80000);
+              nextState = state1_timer_wait;
+          }
+
+          break;
+
+        case state1_timer_wait:
+          nextState = state1_timer_wait;    //default
+
+          //check for COMP1 event after timerwait
+          if(evt->data.evt_system_external_signal.extsignals == evt_COMP1) {
+
+              //LOG_INFO("Comp1 event\n\r");
+
+              //set the processor in EM1 energy mode
+              sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
+
+              //send write command to slave
+              write_cmd();
+
+              nextState = state2_write_cmd;
+          }
+
+          break;
+
+        case state2_write_cmd:
+          nextState = state2_write_cmd;     //default
+
+          //check for I2C transfer complete event after writing command to slave
+          if(evt->data.evt_system_external_signal.extsignals == evt_TransferDone) {
+
+              //LOG_INFO("write transfer done\n\r");
+              //remove processor from EM1 energy mode
+              sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
+
+              //wait 10.8ms for measurement of temperature
+              timerWaitUs_interrupt(10800);
+
+              nextState = state3_write_wait;
+          }
+/*
+          else if(evt->data.evt_system_external_signal.extsignals == evt_I2CRetry) {
+
+              write_cmd();
+          }*/
+
+          break;
+
+        case state3_write_wait:
+          nextState = state3_write_wait;    //default
+
+          //check for COMP1 event after timerwait
+          if(evt->data.evt_system_external_signal.extsignals == evt_COMP1) {
+
+              //read data from sensor
+              read_cmd();
+
+              //set the processor in EM1 energy mode
+              sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
+
+              nextState = state4_read;
+          }
+
+          break;
+
+        case state4_read:
+          nextState = state4_read;          //default
+
+          //check for I2C transfer complete event after reading data from slave
+          if(evt->data.evt_system_external_signal.extsignals == evt_TransferDone) {
+
+              //LOG_INFO("read transfer  done\n\r");
+              //remove processor from EM1 energy mode
+              sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
+              //disable si7021 sensor
+              disable_sensor();
+
+              //disable I2C interrupt
+              NVIC_DisableIRQ(I2C0_IRQn);
+
+              //log temperature value
+              LOG_INFO("Temp = %f C\n\r", convertTemp());
+
+              ble_SendTemp();
+
+
+              nextState = state0_idle;
+          }
+
+          break;
+
+        default:
+
+          LOG_ERROR("Should not be here in state machine\n\r");
+
+          break;
       }
-
-      break;
-
-    case state1_timer_wait:
-      nextState = state1_timer_wait;    //default
-
-      //check for COMP1 event after timerwait
-      if(evt->data.evt_system_external_signal.extsignals == evt_COMP1) {
-
-          //LOG_INFO("Comp1 event\n\r");
-
-          //set the processor in EM1 energy mode
-          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
-
-          //send write command to slave
-          write_cmd();
-
-          nextState = state2_write_cmd;
-      }
-
-      break;
-
-    case state2_write_cmd:
-      nextState = state2_write_cmd;     //default
-
-      //check for I2C transfer complete event after writing command to slave
-      if(evt->data.evt_system_external_signal.extsignals == evt_TransferDone) {
-
-          //LOG_INFO("write transfer done\n\r");
-          //remove processor from EM1 energy mode
-          sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
-
-          //wait 10.8ms for measurement of temperature
-          timerWaitUs_interrupt(10800);
-
-          nextState = state3_write_wait;
-      }
-
-      else if(evt->data.evt_system_external_signal.extsignals == evt_I2CRetry) {
-
-          write_cmd();
-      }
-
-      break;
-
-    case state3_write_wait:
-      nextState = state3_write_wait;    //default
-
-      //check for COMP1 event after timerwait
-      if(evt->data.evt_system_external_signal.extsignals == evt_COMP1) {
-
-          //read data from sensor
-          read_cmd();
-
-          //set the processor in EM1 energy mode
-          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
-
-          nextState = state4_read;
-      }
-
-      break;
-
-    case state4_read:
-      nextState = state4_read;          //default
-
-      //check for I2C transfer complete event after reading data from slave
-      if(evt->data.evt_system_external_signal.extsignals == evt_TransferDone) {
-
-          //LOG_INFO("read transfer  done\n\r");
-          //remove processor from EM1 energy mode
-          sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
-          //disable si7021 sensor
-          disable_sensor();
-
-          //disable I2C interrupt
-          NVIC_DisableIRQ(I2C0_IRQn);
-
-          //log temperature value
-          LOG_INFO("Temp = %f C\n\r", convertTemp());
-
-          ble_SendTemp();
-
-          nextState = state0_idle;
-      }
-
-      break;
-
-    default:
-
-      LOG_ERROR("Should not be here in state machine\n\r");
-
-      break;
-  }
 
   }
   return;

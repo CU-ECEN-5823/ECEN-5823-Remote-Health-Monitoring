@@ -76,7 +76,7 @@ void I2C0_IRQHandler(void) {
   if(transferStatus < 0) {
 
       LOG_ERROR("I2C_TStatus %d : failed\n\r", (uint32_t)transferStatus);
-      schedulerSetEventI2CRetry();
+      //schedulerSetEventI2CRetry();
 
   }
 }

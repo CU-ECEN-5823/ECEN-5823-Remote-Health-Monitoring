@@ -39,28 +39,29 @@ ble_data_struct_t * getBleDataPtr() {
 
 void ble_SendTemp() {
 
-  if(connection_data.connected == true) {
-  float temperature_in_c = convertTemp();
+  //if(connection_data.connected == true) {
+      float temperature_in_c = convertTemp();
 
-  UINT8_TO_BITSTREAM(p, flags);
+      UINT8_TO_BITSTREAM(p, flags);
 
-  htm_temperature_flt = UINT32_TO_FLOAT(temperature_in_c*1000, -3);
+      htm_temperature_flt = UINT32_TO_FLOAT(temperature_in_c*1000, -3);
 
-  UINT32_TO_BITSTREAM(p, htm_temperature_flt);
+      UINT32_TO_BITSTREAM(p, htm_temperature_flt);
 
-  sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_temperature_measurement, 0, 5, &htm_temperature_buffer[0]);
+      sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_temperature_measurement, 0, 5, &htm_temperature_buffer[0]);
 
-  if(sc != SL_STATUS_OK) {
-      LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-  }
-
-  if (connection_data.indication == true) {
-      sc = sl_bt_gatt_server_send_indication(char_stat_connection, char_stat_characteristic, 5, &htm_temperature_buffer[0]);
       if(sc != SL_STATUS_OK) {
-            LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-        }
-  }
-  }
+          LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      //if (connection_data.indication == true) {
+          sc = sl_bt_gatt_server_send_indication(char_stat_connection, char_stat_characteristic, 5, &htm_temperature_buffer[0]);
+          if(sc != SL_STATUS_OK) {
+              LOG_INFO("charac=%d, conn=%d\n\r",char_stat_characteristic, char_stat_connection);
+              LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+          }
+      //}
+  //}
 
 }
 
@@ -149,13 +150,13 @@ void handle_ble_event(sl_bt_msg_t *evt) {
         uint16_t interval;
         uint16_t latency;
         uint16_t timeout;
-        */
+       */
       LOG_INFO("Connection params: connection=%d, interval=%d, latency=%d, timeout=%d, securitymode=%d\n\r",
-              (int) (evt->data.evt_connection_parameters.connection),
-              (int) (evt->data.evt_connection_parameters.interval*1.25),
-              (int) (evt->data.evt_connection_parameters.latency),
-              (int) (evt->data.evt_connection_parameters.timeout*10),
-              (int) (evt->data.evt_connection_parameters.security_mode) );
+               (int) (evt->data.evt_connection_parameters.connection),
+               (int) (evt->data.evt_connection_parameters.interval*1.25),
+               (int) (evt->data.evt_connection_parameters.latency),
+               (int) (evt->data.evt_connection_parameters.timeout*10),
+               (int) (evt->data.evt_connection_parameters.security_mode) );
       //log parameters value
       break;
 
@@ -167,24 +168,25 @@ void handle_ble_event(sl_bt_msg_t *evt) {
     case sl_bt_evt_gatt_server_characteristic_status_id:
 
       if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_temperature_measurement) {
-      char_stat_connection = evt->data.evt_gatt_server_characteristic_status.connection;
-      char_stat_characteristic = evt->data.evt_gatt_server_characteristic_status.characteristic;
+          char_stat_connection = evt->data.evt_gatt_server_characteristic_status.connection;
+          char_stat_characteristic = evt->data.evt_gatt_server_characteristic_status.characteristic;
 
-      //LOG_INFO("client_config = %d\n\r", (unsigned int)evt->data.evt_gatt_server_characteristic_status.client_config_flags);
-      LOG_INFO("charac=%d, conn=%d\n\r",char_stat_characteristic, char_stat_connection);
+          //LOG_INFO("client_config = %d\n\r", (unsigned int)evt->data.evt_gatt_server_characteristic_status.client_config_flags);
+          LOG_INFO("charac=%d, conn=%d\n\r",char_stat_characteristic, char_stat_connection);
 
-      if (sl_bt_gatt_server_client_config == (sl_bt_gatt_server_characteristic_status_flag_t)evt->data.evt_gatt_server_characteristic_status.status_flags) {
+          if (sl_bt_gatt_server_client_config == (sl_bt_gatt_server_characteristic_status_flag_t)evt->data.evt_gatt_server_characteristic_status.status_flags) {
 
-          connection_data.indication = !connection_data.indication;
-      /*if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == 0) {
+              connection_data.indication = !connection_data.indication;
+              LOG_INFO("indication=%d\n\r", connection_data.indication);
+              /*if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
           connection_data.indication = false;
       }
-      else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == 2) {
+      else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
           connection_data.indication = true;
       }*/
 
-      }
-      //track indication bool
+          }
+          //track indication bool
       }
       break;
 
