@@ -14,8 +14,8 @@
 
 // BLE private data
 ble_data_struct_t ble_data;
+
 connection_struct_t connection_data;
-bool indication=false;
 
 sl_status_t sc=0;
 
@@ -54,7 +54,7 @@ void ble_SendTemp() {
       LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
   }
 
-  if (indication == true) {
+  if (connection_data.indication == true) {
       sc = sl_bt_gatt_server_send_indication(char_stat_connection, char_stat_characteristic, 5, &htm_temperature_buffer[0]);
       if(sc != SL_STATUS_OK) {
             LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
@@ -73,7 +73,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
     //for both server and client
     case sl_bt_evt_system_boot_id:
 
-      LOG_INFO("boot event\n\r");
 
       /*Read the Bluetooth identity address used by the device, which can be a public
        * or random static device address.
@@ -132,7 +131,9 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
     case sl_bt_evt_connection_closed_id:
 
+      LOG_INFO("connection closed event, reason=%x", (uint32_t) evt->data.evt_connection_closed.reason);
       connection_data.connected = false;
+
       sc = sl_bt_advertiser_start(bleData->advertisingSetHandle, sl_bt_advertiser_general_discoverable, sl_bt_advertiser_connectable_scannable);
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_advertiser_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
@@ -149,7 +150,12 @@ void handle_ble_event(sl_bt_msg_t *evt) {
         uint16_t latency;
         uint16_t timeout;
         */
-      LOG_INFO("Connection interval: %d ms, Slave latency: %d,Supervision timeout: %d ms\n\r",(unsigned int)evt->data.evt_connection_parameters.interval, (unsigned int)evt->data.evt_connection_parameters.latency, (unsigned int)evt->data.evt_connection_parameters.timeout);
+      LOG_INFO("Connection params: connection=%d, interval=%d, latency=%d, timeout=%d, securitymode=%d\n\r",
+              (int) (evt->data.evt_connection_parameters.connection),
+              (int) (evt->data.evt_connection_parameters.interval*1.25),
+              (int) (evt->data.evt_connection_parameters.latency),
+              (int) (evt->data.evt_connection_parameters.timeout*10),
+              (int) (evt->data.evt_connection_parameters.security_mode) );
       //log parameters value
       break;
 
@@ -160,24 +166,32 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //for servers
     case sl_bt_evt_gatt_server_characteristic_status_id:
 
+      if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_temperature_measurement) {
       char_stat_connection = evt->data.evt_gatt_server_characteristic_status.connection;
       char_stat_characteristic = evt->data.evt_gatt_server_characteristic_status.characteristic;
 
-      LOG_INFO("client_config = %d\n\r", (unsigned int)evt->data.evt_gatt_server_characteristic_status.client_config_flags);
+      //LOG_INFO("client_config = %d\n\r", (unsigned int)evt->data.evt_gatt_server_characteristic_status.client_config_flags);
+      LOG_INFO("charac=%d, conn=%d\n\r",char_stat_characteristic, char_stat_connection);
 
-      if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == 0) {
-          indication = false;
+      if (sl_bt_gatt_server_client_config == (sl_bt_gatt_server_characteristic_status_flag_t)evt->data.evt_gatt_server_characteristic_status.status_flags) {
+
+          connection_data.indication = !connection_data.indication;
+      /*if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == 0) {
+          connection_data.indication = false;
       }
       else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == 2) {
-          indication = true;
+          connection_data.indication = true;
+      }*/
+
       }
       //track indication bool
+      }
       break;
 
     case sl_bt_evt_gatt_server_indication_timeout_id:
 
       LOG_INFO("server indication timeout\n\r");
-      indication = false;
+      connection_data.indication = false;
       break;
 
       //for clients

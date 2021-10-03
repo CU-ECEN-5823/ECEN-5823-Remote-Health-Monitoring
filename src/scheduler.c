@@ -14,6 +14,8 @@
 
 uint32_t MyEvent;
 
+extern connection_struct_t connection_data;
+
 //enum for interrupt based events
 enum {
   evt_NoEvent,
@@ -131,6 +133,8 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
   my_state currentState;
   static my_state nextState = state0_idle;
 
+  if(SL_BT_MSG_ID(evt->header)==sl_bt_evt_system_external_signal_id && connection_data.connected==true && connection_data.indication==true) {
+
   currentState = nextState;     //set current state of the process
 
   switch(currentState) {
@@ -160,7 +164,6 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
           //LOG_INFO("Comp1 event\n\r");
 
-          sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM2);
           //set the processor in EM1 energy mode
           sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
@@ -181,7 +184,6 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
           //LOG_INFO("write transfer done\n\r");
           //remove processor from EM1 energy mode
           sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
-          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
 
           //wait 10.8ms for measurement of temperature
           timerWaitUs_interrupt(10800);
@@ -205,7 +207,6 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
           //read data from sensor
           read_cmd();
 
-          sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM2);
           //set the processor in EM1 energy mode
           sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 
@@ -223,8 +224,6 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
           //LOG_INFO("read transfer  done\n\r");
           //remove processor from EM1 energy mode
           sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
-          sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
-
           //disable si7021 sensor
           disable_sensor();
 
@@ -247,4 +246,7 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
       break;
   }
+
+  }
+  return;
 }

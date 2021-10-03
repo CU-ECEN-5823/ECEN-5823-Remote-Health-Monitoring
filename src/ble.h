@@ -45,6 +45,7 @@ typedef struct {
 
 typedef struct {
   bool connected;
+  bool indication;
 } connection_struct_t;
 
 ble_data_struct_t* getBleDataPtr(void);

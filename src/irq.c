@@ -13,7 +13,7 @@
 #include "app.h"
 #include "src/irq.h"
 
-int rollover_cnt=0;
+long rollover_cnt=0;
 
 uint32_t letimerMilliseconds() {
   uint32_t time_ms;
