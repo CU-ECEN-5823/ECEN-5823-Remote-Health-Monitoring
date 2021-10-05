@@ -87,8 +87,8 @@ SL_WEAK void app_init(void)
   mytimer_init();
 
 #if (LOWEST_ENERGY_MODE > 2)
-      LOG_INFO("Lowest Energy mode possible is EM2, changing to EM2");
-      LOWEST_ENERGY_MODE = 2;
+  LOG_INFO("Lowest Energy mode possible is EM2, changing to EM2");
+  LOWEST_ENERGY_MODE = 2;
 #endif
 
 #if ((LOWEST_ENERGY_MODE > 0) & (LOWEST_ENERGY_MODE < 3))
@@ -153,10 +153,10 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
   // Some events require responses from our application code,
   // and don’t necessarily advance our state machines.
   // For assignment 5 uncomment the next 2 function calls
-     handle_ble_event(evt); // put this code in ble.c/.h
+  handle_ble_event(evt); // put this code in ble.c/.h
 
   // sequence through states driven by events
-     temperature_state_machine(evt);    // put this code in scheduler.c/.h
+  temperature_state_machine(evt);    // put this code in scheduler.c/.h
 
 
 

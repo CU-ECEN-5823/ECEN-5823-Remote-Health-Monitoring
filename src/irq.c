@@ -13,15 +13,16 @@
 #include "app.h"
 #include "src/irq.h"
 
-long rollover_cnt=0;
-
 uint32_t letimerMilliseconds() {
   uint32_t time_ms;
-  time_ms = (rollover_cnt*3000)+((VALUE_TO_LOAD_COMP0-LETIMER_CounterGet(LETIMER0))/16);
+  ble_data_struct_t *bleData = getBleDataPtr();
+  time_ms = ((bleData->rollover_cnt)*3000);
   return time_ms;
 }
 
 void LETIMER0_IRQHandler(void) {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
 
   // determine pending interrupts in peripheral
   uint32_t reason = LETIMER_IntGetEnabled(LETIMER0);
@@ -39,19 +40,13 @@ void LETIMER0_IRQHandler(void) {
   }
 
   //check for UF interrupt
-  else if(reason & LETIMER_IF_UF) {
+  if(reason & LETIMER_IF_UF) {
 
       //set scheduler event
       schedulerSetEventUF();
 
-      // enter critical section
-      CORE_DECLARE_IRQ_STATE;
-      CORE_ENTER_CRITICAL();
+      bleData->rollover_cnt+=1;
 
-      rollover_cnt+=1;
-
-      // exit critical section
-      CORE_EXIT_CRITICAL();
   }
 
 }

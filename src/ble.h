@@ -22,7 +22,7 @@
 
 #define UINT8_TO_BITSTREAM(p, n)      { *(p)++ = (uint8_t)(n); }
 #define UINT32_TO_BITSTREAM(p, n)     { *(p)++ = (uint8_t)(n); *(p)++ = (uint8_t)((n) >> 8); \
-                                        *(p)++ = (uint8_t)((n) >> 16); *(p)++ = (uint8_t)((n) >> 24); }
+    *(p)++ = (uint8_t)((n) >> 16); *(p)++ = (uint8_t)((n) >> 24); }
 #define UINT32_TO_FLOAT(m, e)         (((uint32_t)(m) & 0x00FFFFFFU) | (uint32_t)((int32_t)(e) << 24))
 
 // BLE Data Structure, save all of our private BT data in here.
@@ -37,16 +37,20 @@ typedef struct {
 
   // values unique for server
   // The advertising set handle allocated from Bluetooth stack.
-  uint8_t advertisingSetHandle;
-  bool indication_inFlight;
+  uint8_t advertisingSetHandle;\
+  //connection handle
+  uint8_t connection_handle;
+  //flag to check if bluetooth is connected
+  bool    connected;
+  //flag to check if indication is on
+  bool    indication;
+  //flag to check if indication is in flight
+  bool    indication_inFlight;
+  //rollover count variable
+  uint32_t rollover_cnt;
 
   // values unique for client}
 } ble_data_struct_t;
-
-typedef struct {
-  bool connected;
-  bool indication;
-} connection_struct_t;
 
 ble_data_struct_t* getBleDataPtr(void);
 

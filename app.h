@@ -84,11 +84,11 @@
 // Students: We'll need to modify this for A2 onward.
 #if LOWEST_ENERGY_MODE == 0
 
-  #define APP_IS_OK_TO_SLEEP      (false)
+#define APP_IS_OK_TO_SLEEP      (false)
 
 #else
 
-  #define APP_IS_OK_TO_SLEEP      (true)
+#define APP_IS_OK_TO_SLEEP      (true)
 
 #endif
 

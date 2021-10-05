@@ -21,11 +21,5 @@
 
 uint32_t letimerMilliseconds();
 
-// LETIMER0 interrupt handler
-void LETIMER0_IRQHandler(void);
-
-//I2C0 interrupt handler
-void I2C0_IRQHandler();
-
 
 #endif /* SRC_IRQ_H_ */

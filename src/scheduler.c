@@ -14,15 +14,12 @@
 
 uint32_t MyEvent;
 
-extern connection_struct_t connection_data;
-
 //enum for interrupt based events
 enum {
-  evt_NoEvent,
+  evt_NoEvent=0,
   evt_TimerUF,
   evt_COMP1,
   evt_TransferDone,
-  evt_I2CRetry
 };
 
 //enum to define scheduler events
@@ -83,21 +80,6 @@ void schedulerSetEventTransferDone() {
 
 } // schedulerSetEventXXX()
 
-void schedulerSetEventI2CRetry() {
-
-  // enter critical section
-  CORE_DECLARE_IRQ_STATE;
-  CORE_ENTER_CRITICAL();
-
-  sl_bt_external_signal(evt_I2CRetry);
-  // set the event in your data structure, this is a read-modify-write
-  //MyEvent |= evt_TransferDone;
-
-  // exit critical section
-  CORE_EXIT_CRITICAL();
-
-} // schedulerSetEventXXX()
-
 // scheduler routine to return 1 event to main()code and clear that event
 uint32_t getNextEvent() {
 
@@ -132,8 +114,11 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
   my_state currentState;
   static my_state nextState = state0_idle;
+  ble_data_struct_t *bleData = getBleDataPtr();
 
-  if((SL_BT_MSG_ID(evt->header)==sl_bt_evt_system_external_signal_id) && (connection_data.connected==true) && (connection_data.indication==true)) {
+  if((SL_BT_MSG_ID(evt->header)==sl_bt_evt_system_external_signal_id)
+      && (bleData->connected==true)
+      && (bleData->indication==true)) {
 
       currentState = nextState;     //set current state of the process
 
@@ -190,11 +175,6 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
               nextState = state3_write_wait;
           }
-/*
-          else if(evt->data.evt_system_external_signal.extsignals == evt_I2CRetry) {
-
-              write_cmd();
-          }*/
 
           break;
 
@@ -231,8 +211,9 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
               NVIC_DisableIRQ(I2C0_IRQn);
 
               //log temperature value
-              LOG_INFO("Temp = %f C\n\r", convertTemp());
+              //LOG_INFO("Temp = %f C\n\r", convertTemp());
 
+              //send temperature indication to client
               ble_SendTemp();
 
 

@@ -38,9 +38,9 @@
  *                  GNU ARM 10.2.1
  *
  ******************************************************************************/
- 
- #include "main.h"
- 
+
+#include "main.h"
+
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
@@ -67,29 +67,29 @@ int main(void)
 
   // Start the kernel. Task(s) created in app_init() will start running.
   sl_system_kernel_start();
-  
+
 #else // SL_CATALOG_KERNEL_PRESENT
 
   // The so-called super-loop, sometimes called: "the main while(1) loop"
   while (1) {
-  
-    // Do not remove this call: Silicon Labs components process action routine
-    // must be called from the super loop.
-    // Students: This call will eventually call the function sl_bt_on_event()
-    // defined in app.c which we will discuss in lecture and learn more about
-    // in later programming assignments. Do not remove this call.
-    sl_system_process_action();
 
-    // Application process. See app.c
-    app_process_action();
+      // Do not remove this call: Silicon Labs components process action routine
+      // must be called from the super loop.
+      // Students: This call will eventually call the function sl_bt_on_event()
+      // defined in app.c which we will discuss in lecture and learn more about
+      // in later programming assignments. Do not remove this call.
+      sl_system_process_action();
+
+      // Application process. See app.c
+      app_process_action();
 
 #if defined(SL_CATALOG_POWER_MANAGER_PRESENT)
-    // Let the CPU go to sleep if the system allows it.
-    sl_power_manager_sleep();
+      // Let the CPU go to sleep if the system allows it.
+      sl_power_manager_sleep();
 #endif
 
   } // while
-  
+
 #endif // SL_CATALOG_KERNEL_PRESENT
 
 } // main()

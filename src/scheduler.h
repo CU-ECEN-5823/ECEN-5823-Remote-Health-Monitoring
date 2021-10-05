@@ -11,6 +11,7 @@
 #include "src/timers.h"
 #include "src/oscillators.h"
 #include "src/gpio.h"
+#include "src/ble.h"
 #include "app.h"
 
 #include "em_letimer.h"
@@ -22,8 +23,6 @@ void schedulerSetEventUF();
 void schedulerSetEventCOMP1();
 
 void schedulerSetEventTransferDone();
-
-void schedulerSetEventI2CRetry();
 
 //function to get scheduler event
 uint32_t getNextEvent();
