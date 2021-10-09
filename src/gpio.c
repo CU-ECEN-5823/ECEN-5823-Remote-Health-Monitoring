@@ -38,6 +38,8 @@ void gpioInit()
   GPIO_DriveStrengthSet(sensor_port, gpioDriveStrengthWeakAlternateWeak);
   GPIO_PinModeSet(sensor_port, sensor_pin, gpioModePushPull, false);
 
+  GPIO_DriveStrengthSet(lcd_port, gpioDriveStrengthWeakAlternateWeak);
+  GPIO_PinModeSet(lcd_port, lcd_pin, gpioModePushPull, false);
 } // gpioInit()
 
 
@@ -72,7 +74,14 @@ void disable_sensor() {
   GPIO_PinOutClear(sensor_port, sensor_pin);
 }
 
-
+void gpioSetDisplayExtcomin(bool value) {
+  if(value == true) {
+      GPIO_PinOutSet(lcd_port, lcd_pin);
+  }
+  else {
+      GPIO_PinOutClear(lcd_port, lcd_pin);
+  }
+}
 
 
 

@@ -40,6 +40,7 @@ void schedulerSetEventUF() {
   CORE_ENTER_CRITICAL();
 
   sl_bt_external_signal(evt_TimerUF);
+
   // set the event in your data structure, this is a read-modify-write
   //MyEvent |= evt_TimerUF;
 
@@ -132,10 +133,11 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
               //LOG_INFO("timerUF event\n\r");
               //enable temperature sensor
-              enable_sensor();
+              //enable_sensor();
 
               //wait for 80ms for sensor to power on
               timerWaitUs_interrupt(80000);
+
               nextState = state1_timer_wait;
           }
 
@@ -204,8 +206,9 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
               //LOG_INFO("read transfer  done\n\r");
               //remove processor from EM1 energy mode
               sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM1);
+
               //disable si7021 sensor
-              disable_sensor();
+              //disable_sensor();
 
               //disable I2C interrupt
               NVIC_DisableIRQ(I2C0_IRQn);
@@ -215,7 +218,6 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
               //send temperature indication to client
               ble_SendTemp();
-
 
               nextState = state0_idle;
           }

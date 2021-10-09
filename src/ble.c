@@ -74,7 +74,8 @@ void ble_SendTemp() {
 
               //indication is sent i.e. indication is in flight
               bleData->indication_inFlight = true;
-              //LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
+              LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
+              displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
           }
       }
   }
@@ -150,6 +151,18 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_advertiser_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
+      displayInit();
+      displayPrintf(DISPLAY_ROW_NAME, "Server");
+      displayPrintf(DISPLAY_ROW_BTADDR, "%02X:%02X:%02X:%02X:%02X:%02X",
+                    bleData->myAddress.addr[0],
+                    bleData->myAddress.addr[1],
+                    bleData->myAddress.addr[2],
+                    bleData->myAddress.addr[3],
+                    bleData->myAddress.addr[4],
+                    bleData->myAddress.addr[5]);
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Advertising");
+      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A6");
+
       //initialize connection and indication flags
       bleData->connected           = false;
       bleData->indication          = false;
@@ -200,6 +213,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_connection_set_parameters() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Connected");
+
       break;
 
       //Indicates that a connection was closed.
@@ -218,6 +233,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_advertiser_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Advertising");
+      displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
       break;
 
       //Triggered whenever the connection parameters are changed and at any time a connection is established
@@ -243,6 +260,12 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
       //Indicates that the external signals have been received
     case sl_bt_evt_system_external_signal_id:
+
+      break;
+
+    case sl_bt_evt_system_soft_timer_id:
+
+      displayUpdate();
 
       break;
 
@@ -275,6 +298,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               //check if indication flag is disabled
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
                   bleData->indication = false;
+                  displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
 
               }
 
@@ -302,6 +326,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       break;
 
       //for clients
+
 
   }
 }

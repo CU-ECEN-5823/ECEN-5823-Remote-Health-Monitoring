@@ -1,6 +1,6 @@
 /*
    gpio.h
-  
+
     Created on: Dec 12, 2018
         Author: Dan Walkes
 
@@ -27,6 +27,8 @@
 #define LED1_pin   5
 #define sensor_port gpioPortD
 #define sensor_pin  15
+#define lcd_port  gpioPortD
+#define lcd_pin   13
 
 
 
@@ -38,7 +40,7 @@ void gpioLed1SetOn();
 void gpioLed1SetOff();
 void enable_sensor();
 void disable_sensor();
-
+void gpioSetDisplayExtcomin(bool value);
 
 
 
