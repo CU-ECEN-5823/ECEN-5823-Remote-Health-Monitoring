@@ -37,7 +37,7 @@ typedef struct {
 
   // values unique for server
   // The advertising set handle allocated from Bluetooth stack.
-  uint8_t advertisingSetHandle;\
+  uint8_t advertisingSetHandle;
   //connection handle
   uint8_t connection_handle;
   //flag to check if bluetooth is connected
@@ -49,12 +49,24 @@ typedef struct {
   //rollover count variable
   uint32_t rollover_cnt;
 
-  // values unique for client}
+  // values unique for client
+  uint32_t service_handle;
+  uint16_t char_handle;
+  uint8array char_value;
+  uint32_t client_event;
+
+  bool gatt_procedure;
+
+
 } ble_data_struct_t;
 
 ble_data_struct_t* getBleDataPtr(void);
 
+#if DEVICE_IS_BLE_SERVER
+
 void ble_SendTemp();
+
+#endif
 
 void handle_ble_event(sl_bt_msg_t *evt);
 

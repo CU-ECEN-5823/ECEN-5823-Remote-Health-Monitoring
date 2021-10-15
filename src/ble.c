@@ -13,9 +13,12 @@
 #include "src/log.h"
 
 #define LOG_PARAMETER_VALUES 0
+#define SCAN_PASSIVE 0
 
 // BLE private data
 ble_data_struct_t ble_data;
+
+uint8_t server_addr[6] = SERVER_BT_ADDRESS;
 
 sl_status_t sc=0;
 
@@ -23,12 +26,15 @@ uint32_t adv_int=0x190;           //250 ms advertisement interval
 uint16_t conn_int = 0x3c;         //75 ms connection interval
 uint16_t slave_latency = 0x03;    //3 slave latency - slave can skip upto 3 connection events
 uint16_t spvsn_timeout = 0x50;   //800ms supervision timeout
+uint16_t scan_int = 0x50;
+uint16_t scan_window = 0x28;
 
 ble_data_struct_t * getBleDataPtr() {
 
   return (&ble_data);
 }
 
+#if DEVICE_IS_BLE_SERVER
 //function to send temperature value indication to client
 void ble_SendTemp() {
 
@@ -82,6 +88,37 @@ void ble_SendTemp() {
 
 }
 
+#else
+
+float temperature_in_c;
+// convert IEEE-11073 32-bit float to integer
+static  int32_t  FLOAT_TO_INT32(const  uint8_t  *value_start_little_endian)
+{
+  uint8_t signByte = 0;
+  int32_t mantissa;
+  // input data format is:
+  // [0]       = flags byte
+  // [3][2][1] = mantissa (2's complement)
+  // [4]       = exponent (2's complement)
+  // BT value_start_little_endian[0] has the flags byte
+  int8_t  exponent = (int8_t)value_start_little_endian[4];
+  // sign extend the mantissa value if the mantissa is negative
+  if  (value_start_little_endian[3] & 0x80) {
+      //  msb  of [3] is the sign of the mantissa
+      signByte = 0xFF;
+
+  }
+  mantissa = (int32_t) (value_start_little_endian[1]  << 0)  |
+      (value_start_little_endian[2]  << 8)  |
+      (value_start_little_endian[3]  << 16) |
+      (signByte                      << 24) ;
+  // value = 10^exponent * mantissa,  pow() returns a double type
+  return  (int32_t) (pow(10, exponent) * mantissa); // FLOAT_TO_INT32
+
+}
+
+#endif
+
 //function to handle BLE events
 void handle_ble_event(sl_bt_msg_t *evt) {
 
@@ -96,7 +133,9 @@ void handle_ble_event(sl_bt_msg_t *evt) {
     //Indicates that the device has started and the radio is ready
     case sl_bt_evt_system_boot_id:
 
+      displayInit();
 
+#if DEVICE_IS_BLE_SERVER
       /*Read the Bluetooth identity address used by the device, which can be a public
        * or random static device address.
        *
@@ -151,8 +190,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_advertiser_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
-      displayInit();
-      displayPrintf(DISPLAY_ROW_NAME, "Server");
       displayPrintf(DISPLAY_ROW_BTADDR, "%02X:%02X:%02X:%02X:%02X:%02X",
                     bleData->myAddress.addr[0],
                     bleData->myAddress.addr[1],
@@ -160,13 +197,97 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                     bleData->myAddress.addr[3],
                     bleData->myAddress.addr[4],
                     bleData->myAddress.addr[5]);
+      displayPrintf(DISPLAY_ROW_NAME, "Server");
       displayPrintf(DISPLAY_ROW_CONNECTION, "Advertising");
-      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A6");
 
+#else
+      //for client only
+      sc = sl_bt_system_get_identity_address(&(bleData->myAddress),
+                                             &(bleData->myAddressType));
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_system_get_identity_address() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+      /* Set the scan mode on the specified PHYs. If the device is currently scanning
+       for advertising devices on PHYs, new parameters will take effect when
+       scanning is restarted.
+
+       @param[in] phys PHYs for which the parameters are set.
+       @param[in] scan_mode @parblock
+         Scan mode. Values:
+           - <b>0:</b> Passive scanning
+           - <b>1:</b> Active scanning    */
+      sc = sl_bt_scanner_set_mode(sl_bt_gap_1m_phy, SCAN_PASSIVE);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_scanner_set_mode() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      /* Set the scanning timing parameters on the specified PHYs. If the device is
+         currently scanning for advertising devices on PHYs, new parameters will take
+          effect when scanning is restarted.
+
+        @param[in] phys PHYs for which the parameters are set.
+        @param[in] scan_interval @parblock
+           Scan interval is defined as the time interval when the device starts its
+            last scan until it begins the subsequent scan. In other words, how often to
+            scan
+
+        @param[in] scan_window @parblock
+        Scan window defines the duration of the scan which must be less than or
+        equal to the @p scan_interval */
+      sc = sl_bt_scanner_set_timing(sl_bt_gap_1m_phy, scan_int, scan_window);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_scanner_set_timing() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+
+      sc = sl_bt_connection_set_default_parameters(conn_int,
+                                                   conn_int,
+                                                   slave_latency,
+                                                   spvsn_timeout,
+                                                   0,
+                                                   0);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_scanner_set_default_parameters() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      /*  Start the GAP discovery procedure to scan for advertising devices on the
+          specified scanning PHYs. To cancel an ongoing discovery procedure, use the
+          @ref sl_bt_scanner_stop command.
+
+          @param[in] scanning_phy @parblock
+          The scanning PHYs.
+
+            @param[in] discover_mode Enum @ref sl_bt_scanner_discover_mode_t. Bluetooth
+          discovery Mode. Values:
+      - <b>sl_bt_scanner_discover_limited (0x0):</b> Discover only limited
+        discoverable devices.
+      - <b>sl_bt_scanner_discover_generic (0x1):</b> Discover limited and
+        generic discoverable devices.
+      - <b>sl_bt_scanner_discover_observation (0x2):</b> Discover all devices.  */
+
+      sc = sl_bt_scanner_start(sl_bt_gap_1m_phy, sl_bt_scanner_discover_generic);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_scanner_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      displayPrintf(DISPLAY_ROW_BTADDR, "%02X:%02X:%02X:%02X:%02X:%02X",
+                    bleData->myAddress.addr[0],
+                    bleData->myAddress.addr[1],
+                    bleData->myAddress.addr[2],
+                    bleData->myAddress.addr[3],
+                    bleData->myAddress.addr[4],
+                    bleData->myAddress.addr[5]);
+      displayPrintf(DISPLAY_ROW_NAME, "Client");
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Discovering");
+
+#endif
+
+      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A7");
       //initialize connection and indication flags
       bleData->connected           = false;
       bleData->indication          = false;
       bleData->indication_inFlight = false;
+      bleData->gatt_procedure      = false;
       break;
 
       //Indicates that a new connection was opened
@@ -174,17 +295,18 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
       //set connection flag as true
       bleData->connected         = true;
-
       //get value of connection handle
       /*PACKSTRUCT( struct sl_bt_evt_connection_opened_s
-      {
-        bd_addr address;       Remote device address
-        uint8_t address_type;
-        uint8_t master;
-        uint8_t connection;
-        uint8_t bonding;
-        uint8_t advertiser;   */
+            {
+              bd_addr address;       Remote device address
+              uint8_t address_type;
+              uint8_t master;
+              uint8_t connection;
+              uint8_t bonding;
+              uint8_t advertiser;   */
       bleData->connection_handle = evt->data.evt_connection_opened.connection;
+
+#if DEVICE_IS_BLE_SERVER
 
       /*
        * Stop the advertising of the given advertising set.
@@ -213,6 +335,19 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_connection_set_parameters() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
+
+#else
+
+      displayPrintf(DISPLAY_ROW_BTADDR2, "%02X:%02X:%02X:%02X:%02X:%02X",
+                    server_addr[0],
+                    server_addr[1],
+                    server_addr[2],
+                    server_addr[3],
+                    server_addr[4],
+                    server_addr[5]);
+
+#endif
+
       displayPrintf(DISPLAY_ROW_CONNECTION, "Connected");
 
       break;
@@ -225,6 +360,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->indication          = false;
       bleData->indication_inFlight = false;
 
+#if DEVICE_IS_BLE_SERVER
       //Start advertising of a given advertising set with specified discoverable and connectable modes.
       sc = sl_bt_advertiser_start(bleData->advertisingSetHandle,
                                   sl_bt_advertiser_general_discoverable,
@@ -234,7 +370,18 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       }
 
       displayPrintf(DISPLAY_ROW_CONNECTION, "Advertising");
+
+#else
+      sc = sl_bt_scanner_start(sl_bt_gap_1m_phy, sl_bt_scanner_discover_generic);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_scanner_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Discovering");
+
+#endif
+
       displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
+      displayPrintf(DISPLAY_ROW_BTADDR2, " ");
       break;
 
       //Triggered whenever the connection parameters are changed and at any time a connection is established
@@ -268,6 +415,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       displayUpdate();
 
       break;
+
+#if DEVICE_IS_BLE_SERVER
 
       //for servers
       /*Indicates either that a local Client Characteristic Configuration
@@ -325,7 +474,110 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->indication = false;
       break;
 
+#else
       //for clients
+
+      // Reports an advertising or scan response packet that is received by the
+      // device's radio while in scanning mode
+    case sl_bt_evt_scanner_scan_report_id:
+
+      // Parse advertisement packets
+      if (evt->data.evt_scanner_scan_report.packet_type == 0) {
+          //check whether it is desired server
+          if((evt->data.evt_scanner_scan_report.address.addr[0] == server_addr[0]) &&
+              (evt->data.evt_scanner_scan_report.address.addr[1] == server_addr[1]) &&
+              (evt->data.evt_scanner_scan_report.address.addr[2] == server_addr[2]) &&
+              (evt->data.evt_scanner_scan_report.address.addr[3] == server_addr[3]) &&
+              (evt->data.evt_scanner_scan_report.address.addr[4] == server_addr[4]) &&
+              (evt->data.evt_scanner_scan_report.address.addr[5] == server_addr[5]) &&
+              (evt->data.evt_scanner_scan_report.address_type==0)) {
+
+              sc = sl_bt_scanner_stop();
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_scanner_stop() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+
+              /*  @param[in] address Address of the device to connect to
+          @param[in] address_type Enum @ref sl_bt_gap_address_type_t. Address type of
+          the device to connect to.
+          @param[in] initiating_phy Enum @ref sl_bt_gap_phy_t. The initiating PHY.
+          @param[out] connection Handle that will be assigned to the connection after
+          the connection is established. This handle is valid only if the result code
+            of this response is 0 (zero).  */
+              sc = sl_bt_connection_open(evt->data.evt_scanner_scan_report.address,
+                                         evt->data.evt_scanner_scan_report.address_type, sl_bt_gap_1m_phy, NULL);
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_connection_open() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+          }
+      }
+
+      break;
+
+      //Indicates that the current GATT procedure was completed successfully
+      // or that it failed with an error
+    case sl_bt_evt_gatt_procedure_completed_id:
+
+      LOG_INFO("Gatt procedure complete in handle_event\n\r");
+      bleData->gatt_procedure = false;
+
+      break;
+
+      // Indicate that a GATT service in the remote GATT database was
+      // discovered
+    case sl_bt_evt_gatt_service_id:
+
+      /* PACKSTRUCT( struct sl_bt_evt_gatt_service_s
+{
+  uint8_t    connection; < Connection handle
+  uint32_t   service;    < GATT service handle
+  uint8array uuid;       < Service UUID in little endian format
+}); */
+      LOG_INFO("Discovered a service in handle_event\n\r");
+      bleData->service_handle = evt->data.evt_gatt_service.service;
+
+      break;
+
+      // Indicates that a GATT characteristic in the remote GATT database was
+      // discovered
+    case sl_bt_evt_gatt_characteristic_id:
+
+      /* PACKSTRUCT( struct sl_bt_evt_gatt_characteristic_s
+{
+  uint8_t    connection;     < Connection handle
+  uint16_t   characteristic; < GATT characteristic handle
+  uint8_t    properties;     < Characteristic properties
+  uint8array uuid;           < Characteristic UUID in little endian format
+});*/
+      LOG_INFO("Discovered a characteristic in handle_event\n\r");
+      bleData->char_handle = evt->data.evt_gatt_characteristic.characteristic;
+      break;
+
+      // Indicates that the value of one or several characteristics in the
+      // remote GATT server was received
+    case sl_bt_evt_gatt_characteristic_value_id:
+
+      /*PACKSTRUCT( struct sl_bt_evt_gatt_characteristic_value_s
+      {
+        uint8_t    connection;     < Connection handle
+        uint16_t   characteristic; < GATT characteristic handle. This value is
+                                        normally received from the gatt_characteristic
+                                        event.
+        uint8_t    att_opcode;     < Enum @ref sl_bt_gatt_att_opcode_t. Attribute
+                                        opcode, which indicates the GATT transaction
+                                        used.
+        uint16_t   offset;         < Value offset
+        uint8array value;          < Characteristic value
+      }); */
+      LOG_INFO("Got a char value in handle_event\n\r");
+      bleData->char_value = evt->data.evt_gatt_characteristic_value.value;
+      temperature_in_c = FLOAT_TO_INT32((uint8_t *)&(bleData->char_value));
+      displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
+
+      break;
+
+#endif
+
 
 
   }

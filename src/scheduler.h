@@ -30,5 +30,7 @@ uint32_t getNextEvent();
 //state machine function
 void temperature_state_machine(sl_bt_msg_t *evt);
 
+void discovery_state_machine(sl_bt_msg_t *evt);
+
 
 #endif /* SRC_SCHEDULER_H_ */

@@ -39,6 +39,7 @@
 #define APP_H
 
 #include "stdio.h"
+#include "math.h"
 #include "main.h"
 
 #include "em_common.h"
@@ -49,6 +50,7 @@
 
 #include "sl_status.h" // for sl_status_print()
 #include "sl_bt_api.h"
+#include"sl_bt_api_compatibility.h"
 
 #include "src/ble_device_type.h"
 #include "src/gpio.h"
