@@ -12,12 +12,15 @@
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
 
+//turn this on to log the parameters set by server
 #define LOG_PARAMETER_VALUES 0
+
 #define SCAN_PASSIVE 0
 
 // BLE private data
 ble_data_struct_t ble_data;
 
+//array for hard-coded server address
 uint8_t server_addr[6] = SERVER_BT_ADDRESS;
 
 sl_status_t sc=0;
@@ -26,8 +29,8 @@ uint32_t adv_int=0x190;           //250 ms advertisement interval
 uint16_t conn_int = 0x3c;         //75 ms connection interval
 uint16_t slave_latency = 0x03;    //3 slave latency - slave can skip upto 3 connection events
 uint16_t spvsn_timeout = 0x50;   //800ms supervision timeout
-uint16_t scan_int = 0x50;
-uint16_t scan_window = 0x28;
+uint16_t scan_int = 0x50;         //scanning interval of 50 ms
+uint16_t scan_window = 0x28;      //scanning window of 25 ms
 
 ble_data_struct_t * getBleDataPtr() {
 
@@ -90,7 +93,7 @@ void ble_SendTemp() {
 
 #else
 
-float temperature_in_c;
+int32_t temperature_in_c;
 // convert IEEE-11073 32-bit float to integer
 static  int32_t  FLOAT_TO_INT32(const  uint8_t  *value_start_little_endian)
 {
@@ -135,7 +138,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
       displayInit();
 
-#if DEVICE_IS_BLE_SERVER
       /*Read the Bluetooth identity address used by the device, which can be a public
        * or random static device address.
        *
@@ -146,6 +148,10 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_system_get_identity_address() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
+
+#if DEVICE_IS_BLE_SERVER
+
+      //for server only
 
       /*Create an advertising set. The handle of the created advertising set is
        * returned in response.
@@ -190,23 +196,12 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_advertiser_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
-      displayPrintf(DISPLAY_ROW_BTADDR, "%02X:%02X:%02X:%02X:%02X:%02X",
-                    bleData->myAddress.addr[0],
-                    bleData->myAddress.addr[1],
-                    bleData->myAddress.addr[2],
-                    bleData->myAddress.addr[3],
-                    bleData->myAddress.addr[4],
-                    bleData->myAddress.addr[5]);
       displayPrintf(DISPLAY_ROW_NAME, "Server");
       displayPrintf(DISPLAY_ROW_CONNECTION, "Advertising");
 
 #else
       //for client only
-      sc = sl_bt_system_get_identity_address(&(bleData->myAddress),
-                                             &(bleData->myAddressType));
-      if(sc != SL_STATUS_OK) {
-          LOG_ERROR("sl_bt_system_get_identity_address() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-      }
+
       /* Set the scan mode on the specified PHYs. If the device is currently scanning
        for advertising devices on PHYs, new parameters will take effect when
        scanning is restarted.
@@ -239,13 +234,16 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_scanner_set_timing() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
-
+      /* Set the default Bluetooth connection parameters. The values are valid for all
+         subsequent connections initiated by this device. To change parameters of an
+       already established connection, use the command @ref
+       sl_bt_connection_set_parameters.   */
       sc = sl_bt_connection_set_default_parameters(conn_int,
                                                    conn_int,
                                                    slave_latency,
                                                    spvsn_timeout,
                                                    0,
-                                                   0);
+                                                   4);
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_scanner_set_default_parameters() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
@@ -270,6 +268,11 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_scanner_start() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
+      displayPrintf(DISPLAY_ROW_NAME, "Client");
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Discovering");
+
+#endif
+
       displayPrintf(DISPLAY_ROW_BTADDR, "%02X:%02X:%02X:%02X:%02X:%02X",
                     bleData->myAddress.addr[0],
                     bleData->myAddress.addr[1],
@@ -277,11 +280,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                     bleData->myAddress.addr[3],
                     bleData->myAddress.addr[4],
                     bleData->myAddress.addr[5]);
-      displayPrintf(DISPLAY_ROW_NAME, "Client");
-      displayPrintf(DISPLAY_ROW_CONNECTION, "Discovering");
-
-#endif
-
       displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A7");
       //initialize connection and indication flags
       bleData->connected           = false;
@@ -308,6 +306,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
 #if DEVICE_IS_BLE_SERVER
 
+      //for server only
+
       /*
        * Stop the advertising of the given advertising set.
        * @param[in] handle Advertising set handle */
@@ -316,15 +316,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_advertiser_stop() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
-      /*PACKSTRUCT( struct sl_bt_evt_connection_opened_s
-      {
-       bd_addr address;
-       uint8_t address_type;
-       uint8_t master;
-       uint8_t connection;
-       uint8_t bonding;
-       uint8_t advertiser;
-      });*/
       sc = sl_bt_connection_set_parameters(bleData->connection_handle,
                                            conn_int,
                                            conn_int,
@@ -361,6 +352,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->indication_inFlight = false;
 
 #if DEVICE_IS_BLE_SERVER
+      //for server only
+
       //Start advertising of a given advertising set with specified discoverable and connectable modes.
       sc = sl_bt_advertiser_start(bleData->advertisingSetHandle,
                                   sl_bt_advertiser_general_discoverable,
@@ -381,7 +374,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 #endif
 
       displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
-      displayPrintf(DISPLAY_ROW_BTADDR2, " ");
+      displayPrintf(DISPLAY_ROW_BTADDR2, "");
       break;
 
       //Triggered whenever the connection parameters are changed and at any time a connection is established
@@ -470,7 +463,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //event indicates confirmation from the remote GATT client has not been received within 30 seconds after an indication was sent
     case sl_bt_evt_gatt_server_indication_timeout_id:
 
-      LOG_INFO("server indication timeout\n\r");
+      LOG_ERROR("server indication timeout\n\r");
       bleData->indication = false;
       break;
 
@@ -492,6 +485,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               (evt->data.evt_scanner_scan_report.address.addr[5] == server_addr[5]) &&
               (evt->data.evt_scanner_scan_report.address_type==0)) {
 
+              //stop scanner
               sc = sl_bt_scanner_stop();
               if(sc != SL_STATUS_OK) {
                   LOG_ERROR("sl_bt_scanner_stop() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
@@ -518,7 +512,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       // or that it failed with an error
     case sl_bt_evt_gatt_procedure_completed_id:
 
-      LOG_INFO("Gatt procedure complete in handle_event\n\r");
       bleData->gatt_procedure = false;
 
       break;
@@ -533,7 +526,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
   uint32_t   service;    < GATT service handle
   uint8array uuid;       < Service UUID in little endian format
 }); */
-      LOG_INFO("Discovered a service in handle_event\n\r");
+      //save service handle
       bleData->service_handle = evt->data.evt_gatt_service.service;
 
       break;
@@ -549,7 +542,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
   uint8_t    properties;     < Characteristic properties
   uint8array uuid;           < Characteristic UUID in little endian format
 });*/
-      LOG_INFO("Discovered a characteristic in handle_event\n\r");
+      //save characteristic handle
       bleData->char_handle = evt->data.evt_gatt_characteristic.characteristic;
       break;
 
@@ -569,10 +562,18 @@ void handle_ble_event(sl_bt_msg_t *evt) {
         uint16_t   offset;         < Value offset
         uint8array value;          < Characteristic value
       }); */
-      LOG_INFO("Got a char value in handle_event\n\r");
-      bleData->char_value = evt->data.evt_gatt_characteristic_value.value;
-      temperature_in_c = FLOAT_TO_INT32((uint8_t *)&(bleData->char_value));
-      displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
+      //send indication confirmation to server
+      sc = sl_bt_gatt_send_characteristic_confirmation(bleData->connection_handle);
+
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      //save value got from server in a variable
+      bleData->char_value = &(evt->data.evt_gatt_characteristic_value.value.data[0]);
+
+      temperature_in_c = FLOAT_TO_INT32((bleData->char_value));
+      displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%d", temperature_in_c);
 
       break;
 

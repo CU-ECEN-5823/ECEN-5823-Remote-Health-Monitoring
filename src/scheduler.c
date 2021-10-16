@@ -16,10 +16,13 @@ uint32_t MyEvent;
 
 sl_status_t rc=0;
 
+#if !DEVICE_IS_BLE_SERVER
 // Health Thermometer service UUID defined by Bluetooth SIG
 static const uint8_t thermo_service[2] = { 0x09, 0x18 };
 // Temperature Measurement characteristic UUID defined by Bluetooth SIG
 static const uint8_t thermo_char[2] = { 0x1c, 0x2a };
+
+#endif
 
 //enum for interrupt based events
 enum {
@@ -37,10 +40,10 @@ typedef enum uint32_t {
   state3_write_wait,
   state4_read,
   state0_idle_client,
-  state1,
-  state2,
-  state3,
-  state4,
+  state1_got_services,
+  state2_got_char,
+  state3_set_indication,
+  state4_wait_for_close,
   MY_NUM_STATES,
 }my_state;
 
@@ -123,6 +126,7 @@ uint32_t getNextEvent() {
 } // getNextEvent()
 
 #if DEVICE_IS_BLE_SERVER
+//for server only
 //state machine to be executed
 void temperature_state_machine(sl_bt_msg_t *evt) {
 
@@ -254,21 +258,28 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
 
   my_state currentState;
   static my_state nextState = state0_idle_client;
+
   ble_data_struct_t *bleData = getBleDataPtr();
 
-  bleData->client_event = SL_BT_MSG_ID(evt->header);
+  if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_closed_id) {
+      nextState = state0_idle_client;
+  }
 
   currentState = nextState;     //set current state of the process
 
   switch(currentState) {
 
+    //stay in idle state
     case state0_idle_client:
       nextState = state0_idle_client;          //default
-      LOG_INFO("In client idle\n\r");
 
-      if(bleData->client_event == sl_bt_evt_connection_opened_id) {
-          LOG_INFO("Connection opened\n\r");
+      //wait for connection open event
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_opened_id) {
+
+          //gatt command in process
           bleData->gatt_procedure = true;
+
+          //Discover primary services with the specified UUID in a remote GATT database.
           rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
                                                             sizeof(thermo_service),
                                                             (const uint8_t*)thermo_service);
@@ -276,19 +287,23 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
               LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
 
-          nextState = state1;
+          nextState = state1_got_services;
       }
 
       break;
 
-    case state1:
-      nextState = state1;
-      LOG_INFO("In state1\n\r");
+      //got service from server
+    case state1_got_services:
+      nextState = state1_got_services;
 
-      if(bleData->client_event == sl_bt_evt_gatt_procedure_completed_id) {
+      //wait for previous gatt command to be completed
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
-          LOG_INFO("discovered a service\n\r");
+          //gatt command in process
           bleData->gatt_procedure = true;
+
+          //Discover all characteristics of a GATT service in a remote GATT database
+          // having the specified UUID
           rc = sl_bt_gatt_discover_characteristics_by_uuid(bleData->connection_handle,
                                                            bleData->service_handle,
                                                            sizeof(thermo_char),
@@ -298,18 +313,22 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           }
 
 
-          nextState = state2;
+          nextState = state2_got_char;
       }
 
       break;
 
-    case state2:
-      nextState = state2;
-      LOG_INFO("in state2\n\r");
+      //got characteristic from server
+    case state2_got_char:
+      nextState = state2_got_char;
 
-      if(bleData->client_event == sl_bt_evt_gatt_procedure_completed_id) {
-          LOG_INFO("Discovered characteristic\n\r");
+      //wait for previous gatt command to be completed
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
+
+          //gatt command in process
           bleData->gatt_procedure = true;
+
+          //enable indications sent from server
           rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
                                                           bleData->char_handle,
                                                           sl_bt_gatt_indication);
@@ -319,36 +338,30 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
 
 
           displayPrintf(DISPLAY_ROW_CONNECTION, "Handling indications");
-          nextState = state3;
+          nextState = state3_set_indication;
       }
 
       break;
 
-    case state3:
-      nextState = state3;
-      LOG_INFO("In state3\n\r");
+      //indication is set on from server
+    case state3_set_indication:
+      nextState = state3_set_indication;
 
-      if(bleData->client_event == sl_bt_evt_gatt_characteristic_value_id) {
-          LOG_INFO("Got an indication\n\r");
-          rc = sl_bt_gatt_send_characteristic_confirmation(bleData->connection_handle);
-          if(rc != SL_STATUS_OK) {
-              LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
-          }
+      //gatt complete
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
-      }
-
-      if(bleData->client_event == sl_bt_evt_connection_closed_id) {
-          LOG_INFO("Connection close event\n\r");
-          nextState = state4;
+          nextState = state4_wait_for_close;
       }
 
       break;
 
-    case state4:
-      nextState = state4;
+      //state to wait for a connection close event
+    case state4_wait_for_close:
+      nextState = state4_wait_for_close;
 
-      if(bleData->client_event == sl_bt_evt_connection_opened_id) {
-          LOG_INFO("connection open event\n\r");
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_closed_id) {
+
+          //go in idle state to wait for a connection open event
           nextState = state0_idle_client;
       }
 

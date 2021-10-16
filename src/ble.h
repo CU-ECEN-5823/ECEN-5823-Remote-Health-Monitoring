@@ -50,11 +50,13 @@ typedef struct {
   uint32_t rollover_cnt;
 
   // values unique for client
+  //temperature service handle
   uint32_t service_handle;
+  //temperature characteristic handle
   uint16_t char_handle;
-  uint8array char_value;
-  uint32_t client_event;
-
+  //indication characteristic value from server
+  uint8_t * char_value;
+  //boolean to track GATT command
   bool gatt_procedure;
 
 
