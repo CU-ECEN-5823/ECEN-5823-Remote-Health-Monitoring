@@ -32,7 +32,7 @@
 #define CONN_MAX_CE_LENGTH            250                                       // max ce length
 
 sl_bt_msg_t *evt;                                                               //evt struct that stores data and header.
-float temp;                                                                     //stores the value of temperature recorded from Si7021
+int temp;                                                                     //stores the value of temperature recorded from Si7021
 int temp_client;                                                                //stores the temperature value received from server to display on client display
 // BLE private data
 ble_data_struct_t ble_data;
@@ -438,7 +438,7 @@ void sl_bt_ht_temperature_measurement_indication_changed_cb(uint8_t connection, 
       LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x", (unsigned int) sc);
       }
 
-      displayPrintf(DISPLAY_ROW_TEMPVALUE, "%f", temp);
+      displayPrintf(DISPLAY_ROW_TEMPVALUE, "temp=%d", temp);
   }
   else{
       LOG_ERROR("Indication state has been changed in the middle of the state machine!!");

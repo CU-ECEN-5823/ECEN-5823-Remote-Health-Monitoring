@@ -67,8 +67,8 @@ void turnoff();
 /* function     : store
  * params       : none
  * brief        : Convert and log the temperature
- * return_type  : float
+ * return_type  : int
  * */
-float store();
+int store();
 
 #endif /* SRC_I2C_H_ */
