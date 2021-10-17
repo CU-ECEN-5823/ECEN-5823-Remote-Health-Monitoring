@@ -15,6 +15,12 @@
 
 #define UINT32_TO_FLOAT(m, e) (((uint32_t)(m) & 0x00FFFFFFU) | (uint32_t)((int32_t)(e) << 24))
 
+// Health Thermometer service UUID defined by Bluetooth SIG
+static const uint8_t thermo_service[2] = { 0x09, 0x18 };                                                                                //which is later converted to bitstream to send to the app.
+
+// Temperature Measurement characteristic UUID defined by Bluetooth SIG
+static const uint8_t thermo_char[2] = { 0x1c, 0x2a };
+
 // BLE Data Structure, save all of our private BT data in here.
 // Modern C (circa 2021 does it this way)
 // typedef ble_data_struct_t is referred to as an anonymous struct definition
@@ -46,6 +52,15 @@ typedef struct {
       bool i_am_a_bool_for_temp;
       // values unique for client
 
+      //bool for checking if connection is open
+      bool i_am_a_bool_for_inflight;
+
+      //variable to store the client service handle
+      uint32_t client_service_handle;
+
+      //variable to store the client characteristic handle
+      uint16_t client_characteristic_handle;
+
 } ble_data_struct_t;
 
 // function prototypes
@@ -76,5 +91,12 @@ void sl_bt_ht_temperature_measurement_indication_confirmed_cb(uint8_t connection
  * return type  : void
  */
 void sl_bt_ht_temperature_measurement_indication_changed_cb(uint8_t connection, uint16_t characteristic);
+
+/* function     : gattFloat32ToInt
+ * params       : const uint8_t *value_start_little_endian
+ * brief        : function to convert float data into integer
+ * return type  : void
+ */
+int32_t gattFloat32ToInt(const uint8_t *value_start_little_endian);
 
 #endif /* SRC_BLE_H_ */

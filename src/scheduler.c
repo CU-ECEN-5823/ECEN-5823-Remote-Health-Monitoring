@@ -1,6 +1,7 @@
 /*
  * scheduler.c
- * Schedules event for Underflow, COMP1 and I2C.
+ * Schedules event for Underflow, COMP1 and I2C. Traverses through different states for server in temperature state machine
+ * and the same for client in discovery state machine.
  *  Created on: Sep 15, 2021
  *      Author: mich1576
  */
@@ -9,6 +10,7 @@
 #include "scheduler.h"
 #include "ble.h"
 #include "app_assert.h"
+#include "lcd.h"
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
@@ -44,6 +46,7 @@ void scheduler_evtI2C () {
   CORE_EXIT_CRITICAL();               // re-enable interrupts in NVIC
 }
 
+/************************************************************SERVER STATE MACHINE*****************************************************************/
 void temperature_state_machine (sl_bt_msg_t *evt) {
 
      state_t currentState;                                                      //variable to get the current state
@@ -111,4 +114,73 @@ void temperature_state_machine (sl_bt_msg_t *evt) {
        default:
          break;
      } // switch
-} // state_machine()
+} // server state_machine()
+
+
+/************************************************************CLIENT STATE MACHINE*****************************************************************/
+void discovery_state_machine (sl_bt_msg_t *evt){
+
+      sl_status_t retstat;                                                          //stores the return status of different bluetooth API functions
+      conn_state_t currentState;                                                    //variable to get the current state
+      static conn_state_t nextState = opening;                                      //initializing next state as ideal
+      currentState = nextState;                                                     //initialize current state as next state
+      ble_data_struct_t *bleDataPtr = getBleDataPtr();
+
+      switch(currentState){
+        case opening:                                                                                   //wait in this state until open event is observed
+          if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_opened_id){                              //connection observed
+              retstat = sl_bt_gatt_discover_primary_services_by_uuid(bleDataPtr->connection_handle,     //start discovering for services
+                                                                     sizeof(thermo_service),
+                                                                     (const uint8_t*)thermo_service);
+              app_assert_status(retstat);                                                               //check return status
+              nextState = discover_services;                                                            //set the next state to discover services until a complete event is observed
+          }
+         break;
+
+        case discover_services:                                                                         //wait in this state until service is discovered
+         if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id){                        //completed event observed
+              retstat = sl_bt_gatt_discover_characteristics_by_uuid(bleDataPtr->connection_handle,      //start discovering for characteristics
+                                                                    bleDataPtr->client_service_handle,
+                                                                     sizeof(thermo_char),
+                                                                     (const uint8_t*)thermo_char);
+              app_assert_status(retstat);                                                               //check return status
+              nextState = discover_characteristics;                                                     //set the next state to discover characteristics until completed event is observed
+          }
+          break;
+
+        case discover_characteristics:                                                                  //wait in this state until service is discovered
+          if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id){                       //completed event observed
+              // stop discovering
+              sl_bt_scanner_stop();                                                                     //stop scanning for devices
+              // enable indications
+              retstat = sl_bt_gatt_set_characteristic_notification(bleDataPtr->connection_handle,       //send indication
+                                                                        bleDataPtr->client_characteristic_handle,
+                                                                        sl_bt_gatt_indication);
+              app_assert_status(retstat);                                                               //check return value
+              displayPrintf(DISPLAY_ROW_CONNECTION,"Handling Indications");                             //display on LED as handling connections
+              nextState = enable_indication;                                                            //stay in enable indication state until a close event is received
+          }
+          break;
+
+        case enable_indication:                                                                         //stay in enable indication state until a close event is received
+          if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_characteristic_value_id){                      //value received
+              retstat = sl_bt_gatt_send_characteristic_confirmation(bleDataPtr->connection_handle);     //send confirmation that value is received
+              app_assert_status(retstat);                                                               //check return value
+              nextState = enable_indication;                                                            //Indication still enabled
+          }
+          else if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_closed_id){                         //if connection closed
+              nextState = scanning;                                                                     //go to scanning
+          }
+          break;
+
+        case scanning:
+              retstat = sl_bt_scanner_start(sl_bt_gap_1m_phy, sl_bt_scanner_discover_generic);          //start scanning for devices again
+              app_assert_status_f(retstat, "Failed to start discovery #2\n");                           //check return value
+            nextState = opening;                                                                        //go to opening state again
+          break;
+
+        default:
+          break;
+      }//switch
+
+} //client state machine

@@ -39,6 +39,7 @@
 #include "app.h"
 #include "src/scheduler.h"
 #include "src/ble.h"
+#include "src/ble_device_type.h"
 
 
 // Include logging for this file
@@ -171,9 +172,19 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
   // For assignment 5 uncomment the next 2 function calls
    handle_ble_event(evt); // put this code in ble.c/.h
 
+#if DEVICE_IS_BLE_SERVER
+   //SERVER
+
   // sequence through states driven by events
    temperature_state_machine(evt);    // put this code in scheduler.c/.h
   
+#else
+   //CLIENT
+
+   // sequence through service and characteristic discovery
+   discovery_state_machine(evt); // put this code in src/scheduler.c/.h
+
+#endif
   
    
 } // sl_bt_on_event()

@@ -12,7 +12,7 @@
 #include "em_core.h"
 #include "i2c.h"
 
-//enum to determine which state/event to be in
+//enum to determine which event to be in for server
 typedef enum {
 evtNoEvent = 0,
 evtUF = 1,
@@ -20,6 +20,7 @@ evtCOMP1 = 2,
 evtI2C = 4,
 }event_t;
 
+//enum to determine which state to be in for server
 typedef enum{
 Idle = 0,
 Warmup = 1,
@@ -28,6 +29,18 @@ read = 3,
 timerwait = 4,
 }state_t;
 
+//enum to determine which state to be in for client
+typedef enum {
+ opening = 0,
+ discover_services = 1,
+ discover_characteristics = 2,
+ enable_indication = 3,
+ scanning = 4,
+} conn_state_t;
+
+
+
+//***************************************************SERVER SCHEDULER EVENTS********************************************//
 //function prototypes
 /*  function          : scheduler_evtUF
  *  params            : none
@@ -55,10 +68,20 @@ void scheduler_evtCOMP1 ();
  * */
 void scheduler_evtI2C ();
 
+//*****************************************************SERVER STATE MACHINE****************************************************//
 /*  function          : temperature_state_machine
  *  params            : sl_bt_msg_t *evt
  *  brief             : Takes event sent by bluetooth struct as input and based on the previous state updates the next state
  *  return-type       : void
  * */
 void temperature_state_machine (sl_bt_msg_t *evt);
+
+
+//*****************************************************CLIENT STATE MACHINE****************************************************//
+/*  function          : discovery_state_machine
+ *  params            : none
+ *  brief             : sequences through service and characteristics.
+ *  return-type       : void
+ * */
+void discovery_state_machine ();
 #endif /* SRC_SCHEDULER_H_ */
