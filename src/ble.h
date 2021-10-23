@@ -25,7 +25,7 @@
     *(p)++ = (uint8_t)((n) >> 16); *(p)++ = (uint8_t)((n) >> 24); }
 #define UINT32_TO_FLOAT(m, e)         (((uint32_t)(m) & 0x00FFFFFFU) | (uint32_t)((int32_t)(e) << 24))
 
-#define MAX_PTR 64
+#define MAX_PTR 16
 #define READ 0
 #define WRITE 1
 
