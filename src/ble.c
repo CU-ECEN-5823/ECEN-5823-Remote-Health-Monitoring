@@ -14,8 +14,19 @@
 
 //turn this on to log the parameters set by server
 #define LOG_PARAMETER_VALUES 0
+#define FLAGS 0x0F
 
 #define SCAN_PASSIVE 0
+
+//enum for interrupt based events
+enum {
+  evt_NoEvent=0,
+  evt_TimerUF,
+  evt_COMP1,
+  evt_TransferDone,
+  evt_ButtonPressed,
+  evt_ButtonReleased,
+};
 
 // BLE private data
 ble_data_struct_t ble_data;
@@ -24,6 +35,7 @@ ble_data_struct_t ble_data;
 uint8_t server_addr[6] = SERVER_BT_ADDRESS;
 
 sl_status_t sc=0;
+int qc=0;
 
 uint32_t adv_int=0x190;           //250 ms advertisement interval
 uint16_t conn_int = 0x3c;         //75 ms connection interval
@@ -37,7 +49,101 @@ ble_data_struct_t * getBleDataPtr() {
   return (&ble_data);
 }
 
+//function to increment read and write pointer in circular buffer
+int inc_ptr(int ptr) {
+
+  //reset the pointer value after reaching buffer limit
+  if(ptr+1 >= MAX_PTR) {
+      ptr=0;
+  }
+
+  //increment the pointer by one
+  else {
+      ptr++;
+  }
+
+  return ptr;
+}
+
+//function to store indication data in circular buffer
+//@para: [struct buffer_entry write_data]
+//        structure with all the indication data
+int enqueue(struct buffer_entry write_data) {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  //check if the buffer is full
+  if(bleData->full) {
+      LOG_ERROR("Buffer is full\n\r");
+      return -1;
+  }
+
+  //store the indication data in the circular buffer at location pointed by wptr(write pointer)
+  bleData->indication_buffer[bleData->wptr] = write_data;
+
+  //increment write pointer
+  bleData->wptr = inc_ptr(bleData->wptr);
+
+  //if wptr and rptr are at same location, buffer is full
+  if(bleData->wptr == bleData->rptr)
+    bleData->full = 1;
+
+  return 0;
+
+}
+
+//function to dequeue indication data from the circular buffer and send  the indication
+int dequeue() {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  //check if buffer is empty
+  if(bleData->wptr==bleData->rptr && !bleData->full) {
+      LOG_ERROR("Buffer is empty\n\r");
+      return -1;
+  }
+
+  struct buffer_entry read_data;
+
+  //get indication data from the circular buffer
+  read_data = bleData->indication_buffer[bleData->rptr];
+
+  if(!bleData->indication || !bleData->button_indication)
+    return 0;
+
+  //send the indication to client
+  sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
+                                         read_data.charHandle,
+                                         read_data.bufferLength,
+                                         &(read_data.buffer[0]));
+
+  //check indication return status
+  if(sc != SL_STATUS_OK) {
+      LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      return -1;
+  }
+  else {
+
+      //if buffer was previously full, reset it since we read an element from there
+      if(bleData->full)
+        bleData->full=false;
+
+      //increment the read pointer
+      bleData->rptr = inc_ptr(bleData->rptr);
+
+      //indication is sent i.e. indication is in flight
+      bleData->indication_inFlight = true;
+      //decrement queued indications
+      bleData->queued_indication--;
+
+      return 0;
+  }
+
+
+}
+
 #if DEVICE_IS_BLE_SERVER
+
 //function to send temperature value indication to client
 void ble_SendTemp() {
 
@@ -46,6 +152,8 @@ void ble_SendTemp() {
   uint32_t htm_temperature_flt;
   uint8_t flags = 0x00;
   ble_data_struct_t *bleData = getBleDataPtr();
+
+  struct buffer_entry indication_data;
 
   //check if bluetooth is connected
   if(bleData->connected == true){
@@ -70,21 +178,112 @@ void ble_SendTemp() {
       }
 
       //check if indication is on
-      if (bleData->indication == true && bleData->indication_inFlight == false) {
+      if (bleData->indication == true) {
 
-          sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
-                                                 gattdb_temperature_measurement,
-                                                 5,
-                                                 &htm_temperature_buffer[0]);
-          if(sc != SL_STATUS_OK) {
-              LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+          //check if any indication is inFlight
+          if(bleData->indication_inFlight) {
+
+              //save the characteristic values in a buffer_entry
+              indication_data.charHandle = gattdb_temperature_measurement;
+              indication_data.bufferLength = 5;
+              for(int i=0; i<5; i++)
+                indication_data.buffer[i] = htm_temperature_buffer[i];
+
+              //store indication data in circular buffer
+              qc = enqueue(indication_data);
+
+              //increase number of queued indications
+              if(qc == 0)
+                bleData->queued_indication++;
+              else
+                LOG_ERROR("Indication enqueue failed\n\r");
           }
-          else {
 
-              //indication is sent i.e. indication is in flight
-              bleData->indication_inFlight = true;
-              LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
-              displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
+          //send indication of temperature measurement if no indication is inFlight
+          else {
+              sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
+                                                     gattdb_temperature_measurement,
+                                                     5,
+                                                     &htm_temperature_buffer[0]);
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+              else {
+
+                  //indication is sent i.e. indication is in flight
+                  bleData->indication_inFlight = true;
+                  //LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
+                  displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
+              }
+          }
+      }
+  }
+
+}
+
+//function to send button state indication
+void ble_SendButtonState(uint8_t value) {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  struct buffer_entry indication_data;
+
+  uint8_t button_value_buffer[2];
+
+  button_value_buffer[0] = value;
+  button_value_buffer[1] = 0;
+
+  //check if Bluetooth is connected
+  if(bleData->connected == true){
+
+      //write button state in gatt database
+      sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_button_state,
+                                                               0,
+                                                               1,
+                                                               &button_value_buffer[0]);
+
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      //check if indication is on and server and client are bonded
+      if (bleData->button_indication == true && bleData->bonded == true) {
+
+          //check if any indication is inFlight
+          if(bleData->indication_inFlight) {
+
+              //save the characteristic values in a buffer_entry
+              indication_data.charHandle = gattdb_button_state;
+              indication_data.bufferLength = 2;
+              for(int i=0; i<2; i++)
+                indication_data.buffer[i] = button_value_buffer[i];
+
+              //store indication data in circular buffer
+              qc = enqueue(indication_data);
+
+              //increase number of queued indications
+              if(qc == 0)
+                bleData->queued_indication++;
+              else
+                LOG_ERROR("Indication enqueue failed\n\r");
+          }
+
+          //send indication of temperature measurement if no indication is inFlight
+          else {
+              sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
+                                                     gattdb_button_state,
+                                                     2,
+                                                     &button_value_buffer[0]);
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+
+              else {
+
+                  //indication is sent i.e. indication is in flight
+                  bleData->indication_inFlight = true;
+                  //LOG_INFO("Sent Button indication, value=%d\n\r", value);
+              }
           }
       }
   }
@@ -176,6 +375,18 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                                        0);
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_advertiser_set_timing() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      //Configuration according to constants set at compile time.
+      sc = sl_bt_sm_configure(FLAGS, sl_bt_sm_io_capability_displayyesno);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_sm_configure() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      //delete bonding data from server
+      sc = sl_bt_sm_delete_bondings();
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_sm_delete_bondings() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
       /*
@@ -280,12 +491,20 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                     bleData->myAddress.addr[3],
                     bleData->myAddress.addr[4],
                     bleData->myAddress.addr[5]);
-      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A7");
+      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A8");
+
       //initialize connection and indication flags
       bleData->connected           = false;
+      bleData->bonded           = false;
       bleData->indication          = false;
+      bleData->button_indication   = false;
       bleData->indication_inFlight = false;
       bleData->gatt_procedure      = false;
+      bleData->rptr = 0;
+      bleData->wptr = 0;
+      bleData->queued_indication = 0;
+      bleData->button_pressed = false;
+
       break;
 
       //Indicates that a new connection was opened
@@ -316,6 +535,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           LOG_ERROR("sl_bt_advertiser_stop() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
       }
 
+      //set parameter values from server
       sc = sl_bt_connection_set_parameters(bleData->connection_handle,
                                            conn_int,
                                            conn_int,
@@ -346,13 +566,35 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //Indicates that a connection was closed.
     case sl_bt_evt_connection_closed_id:
 
+      gpioLed0SetOff();
+      gpioLed1SetOff();
+
+      displayPrintf(DISPLAY_ROW_9, "");
+      displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
+      displayPrintf(DISPLAY_ROW_PASSKEY, "");
+      displayPrintf(DISPLAY_ROW_ACTION, "");
+
       //turn off all connection and indication flags
       bleData->connected           = false;
+      bleData->bonded           = false;
       bleData->indication          = false;
+      bleData->button_indication   = false;
       bleData->indication_inFlight = false;
+      bleData->gatt_procedure      = false;
+      bleData->rptr = 0;
+      bleData->wptr = 0;
+      bleData->queued_indication = 0;
+      bleData->button_pressed = false;
 
 #if DEVICE_IS_BLE_SERVER
+
       //for server only
+
+      //delete bonding data from server
+      sc = sl_bt_sm_delete_bondings();
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_sm_delete_bondings() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
 
       //Start advertising of a given advertising set with specified discoverable and connectable modes.
       sc = sl_bt_advertiser_start(bleData->advertisingSetHandle,
@@ -375,6 +617,52 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
       displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
       displayPrintf(DISPLAY_ROW_BTADDR2, "");
+      break;
+
+      //Indicates a user request to display that the new bonding request is
+      // received and for the user to confirm the request
+    case sl_bt_evt_sm_confirm_bonding_id:
+
+      //Accept or reject the bonding request.
+      sc = sl_bt_sm_bonding_confirm(bleData->connection_handle, 1);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_sm_bonding_confirm() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      break;
+
+      //Indicates a request for passkey display and confirmation by the user
+    case sl_bt_evt_sm_confirm_passkey_id:
+
+      //get the passkey
+      bleData->passkey = evt->data.evt_sm_confirm_passkey.passkey;
+
+      displayPrintf(DISPLAY_ROW_PASSKEY, "%d", bleData->passkey);
+      displayPrintf(DISPLAY_ROW_ACTION, "Confirm with PB0");
+
+      break;
+
+      //Triggered after the pairing or bonding procedure is successfully completed.
+    case sl_bt_evt_sm_bonded_id:
+
+      displayPrintf(DISPLAY_ROW_CONNECTION, "Bonded");
+      bleData->bonded           = true;
+      displayPrintf(DISPLAY_ROW_PASSKEY, "");
+      displayPrintf(DISPLAY_ROW_ACTION, "");
+
+      break;
+
+      // This event is triggered if the pairing or bonding procedure fails.
+    case sl_bt_evt_sm_bonding_failed_id:
+
+      LOG_ERROR("Bonding failed reason=0x%04x\n\r", evt->data.evt_sm_bonding_failed.reason);
+
+      //close connection
+      sc = sl_bt_connection_close(bleData->connection_handle);
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_connection_close() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
       break;
 
       //Triggered whenever the connection parameters are changed and at any time a connection is established
@@ -401,11 +689,51 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //Indicates that the external signals have been received
     case sl_bt_evt_system_external_signal_id:
 
+      //check for button pressed event
+      if(evt->data.evt_system_external_signal.extsignals == evt_ButtonPressed) {
+
+          displayPrintf(DISPLAY_ROW_9, "Button Pressed");
+
+          if(bleData->bonded == false) {
+
+              //Accept or reject the reported passkey confirm value.
+              sc = sl_bt_sm_passkey_confirm(bleData->connection_handle, 1);
+
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_sm_passkey_confirm() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+          }
+
+          if(bleData->bonded)
+            ble_SendButtonState(0x01);
+      }
+
+      //check for button released event
+      else if(evt->data.evt_system_external_signal.extsignals == evt_ButtonReleased) {
+
+          displayPrintf(DISPLAY_ROW_9, "Button Released");
+
+          if(bleData->bonded)
+            ble_SendButtonState(0x00);
+      }
+
       break;
 
+      //Indicates that a soft timer has lapsed.
     case sl_bt_evt_system_soft_timer_id:
 
       displayUpdate();
+
+      //check for any indications queued or if any indication is inFlight
+      if(bleData->queued_indication!=0 && !bleData->indication_inFlight) {
+
+          //read data and send indication
+          qc = dequeue();
+
+          if(qc != 0)
+            LOG_ERROR("Indication dequeue failed\n\r");
+
+      }
 
       break;
 
@@ -431,6 +759,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
         uint16_t client_config_flags; This field carries the new value of the
                                            Client Characteristic Configuration.
         uint16_t client_config;       The handle of client-config descriptor. */
+
+      //check if the characteristic change is for HTM
       if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_temperature_measurement) {
 
           //check if any status flag has been changed by client
@@ -440,6 +770,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               //check if indication flag is disabled
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
                   bleData->indication = false;
+                  gpioLed0SetOff();
                   displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
 
               }
@@ -447,17 +778,43 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               //check if indication flag is enabled
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
                   bleData->indication = true;
+                  gpioLed0SetOn();
               }
 
           }
 
-          //check if indication confirmation has been received from client
-          if (sl_bt_gatt_server_confirmation == (sl_bt_gatt_server_characteristic_status_flag_t)
-              evt->data.evt_gatt_server_characteristic_status.status_flags) {
-              bleData->indication_inFlight = false;
-          }
-          //track indication bool
       }
+
+      //check if the characteristic change is from Push button
+      if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_button_state) {
+
+          //check if any status flag has been changed by client
+          if (sl_bt_gatt_server_client_config == (sl_bt_gatt_server_characteristic_status_flag_t)
+              evt->data.evt_gatt_server_characteristic_status.status_flags) {
+
+              //check if indication flag is disabled
+              if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
+                  bleData->button_indication = false;
+                  gpioLed1SetOff();
+
+              }
+
+              //check if indication flag is enabled
+              else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
+                  bleData->button_indication = true;
+                  gpioLed1SetOn();
+              }
+
+          }
+
+      }
+
+      //check if indication confirmation has been received from client
+      if (sl_bt_gatt_server_confirmation == (sl_bt_gatt_server_characteristic_status_flag_t)
+          evt->data.evt_gatt_server_characteristic_status.status_flags) {
+          bleData->indication_inFlight = false;
+      }
+
       break;
 
       //event indicates confirmation from the remote GATT client has not been received within 30 seconds after an indication was sent
@@ -465,6 +822,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
       LOG_ERROR("server indication timeout\n\r");
       bleData->indication = false;
+      bleData->button_indication = false;
       break;
 
 #else
@@ -578,8 +936,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       break;
 
 #endif
-
-
 
   }
 }

@@ -30,6 +30,8 @@ enum {
   evt_TimerUF,
   evt_COMP1,
   evt_TransferDone,
+  evt_ButtonPressed,
+  evt_ButtonReleased,
 };
 
 //enum to define scheduler events
@@ -96,10 +98,41 @@ void schedulerSetEventTransferDone() {
 
 } // schedulerSetEventXXX()
 
+// scheduler routine to set a scheduler event
+void schedulerSetEventButtonPressed() {
+
+  // enter critical section
+  CORE_DECLARE_IRQ_STATE;
+  CORE_ENTER_CRITICAL();
+
+  sl_bt_external_signal(evt_ButtonPressed);
+  // set the event in your data structure, this is a read-modify-write
+
+  // exit critical section
+  CORE_EXIT_CRITICAL();
+
+} // schedulerSetEventXXX()
+
+// scheduler routine to set a scheduler event
+void schedulerSetEventButtonReleased() {
+
+  // enter critical section
+  CORE_DECLARE_IRQ_STATE;
+  CORE_ENTER_CRITICAL();
+
+  sl_bt_external_signal(evt_ButtonReleased);
+  // set the event in your data structure, this is a read-modify-write
+
+  // exit critical section
+  CORE_EXIT_CRITICAL();
+
+} // schedulerSetEventXXX()
+
 // scheduler routine to return 1 event to main()code and clear that event
 uint32_t getNextEvent() {
 
   static uint32_t theEvent=evt_NoEvent;
+
   //determine 1 event to return to main() code, apply priorities etc.
   // clear the event in your data structure, this is a read-modify-write
   // enter critical section

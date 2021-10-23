@@ -71,8 +71,34 @@ void I2C0_IRQHandler(void) {
   if(transferStatus < 0) {
 
       LOG_ERROR("I2C_TStatus %d : failed\n\r", (uint32_t)transferStatus);
-      //schedulerSetEventI2CRetry();
 
+  }
+}
+
+void GPIO_EVEN_IRQHandler(void) {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  // determine pending interrupts in peripheral
+  uint32_t reason = GPIO_IntGet();
+
+  GPIO_IntClear(reason);
+
+  //get the push button status
+  uint8_t button_status = GPIO_PinInGet(button_port, button_pin);
+
+  //check if the interrupt triggered was from PB0
+  if(reason == 64) {
+
+      if(!button_status) {
+          bleData->button_pressed = true;
+          schedulerSetEventButtonPressed();
+      }
+
+      else {
+          bleData->button_pressed = false;
+          schedulerSetEventButtonReleased();
+      }
   }
 }
 

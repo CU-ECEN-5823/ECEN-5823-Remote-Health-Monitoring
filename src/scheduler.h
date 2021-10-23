@@ -24,6 +24,10 @@ void schedulerSetEventCOMP1();
 
 void schedulerSetEventTransferDone();
 
+void schedulerSetEventButtonPressed();
+
+void schedulerSetEventButtonReleased();
+
 //function to get scheduler event
 uint32_t getNextEvent();
 

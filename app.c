@@ -87,12 +87,12 @@ SL_WEAK void app_init(void)
   mytimer_init();
 
 #if (LOWEST_ENERGY_MODE > 2)
-  LOG_INFO("Lowest Energy mode possible is EM2, changing to EM2");
+  //LOG_INFO("Lowest Energy mode possible is EM2, changing to EM2");
   LOWEST_ENERGY_MODE = 2;
 #endif
 
 #if ((LOWEST_ENERGY_MODE > 0) & (LOWEST_ENERGY_MODE < 3))
-  LOG_INFO("Applying Pwr Mgr requirement of %d\n\r", (int) LOWEST_ENERGY_MODE);
+  //LOG_INFO("Applying Pwr Mgr requirement of %d\n\r", (int) LOWEST_ENERGY_MODE);
   if(LOWEST_ENERGY_MODE == 2)
     sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
   else if(LOWEST_ENERGY_MODE == 1)
@@ -102,6 +102,8 @@ SL_WEAK void app_init(void)
   //enable interrupt for LETIMER0 in NVIC
   NVIC_ClearPendingIRQ(LETIMER0_IRQn);
   NVIC_EnableIRQ(LETIMER0_IRQn);
+  NVIC_ClearPendingIRQ(GPIO_EVEN_IRQn);
+  NVIC_EnableIRQ(GPIO_EVEN_IRQn);
 
 }
 
