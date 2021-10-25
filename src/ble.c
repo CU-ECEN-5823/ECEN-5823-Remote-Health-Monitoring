@@ -108,9 +108,6 @@ int dequeue() {
   //get indication data from the circular buffer
   read_data = bleData->indication_buffer[bleData->rptr];
 
-  if(!bleData->indication || !bleData->button_indication)
-    return 0;
-
   //send the indication to client
   sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
                                          read_data.charHandle,
