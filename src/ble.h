@@ -67,6 +67,8 @@ typedef struct {
   uint32_t rollover_cnt;
   //flag to check if push button is pressed
   bool button_pressed;
+  bool pb1_button_pressed;
+  int press_seq;
   //flag to check if server and client are bonded
   bool bonded;
   //variable to save bonding passkey
@@ -88,6 +90,12 @@ typedef struct {
   uint16_t char_handle;
   //indication characteristic value from server
   uint8_t * char_value;
+  //button service handle
+  uint32_t button_service_handle;
+  //button characteristic handle
+  uint16_t button_char_handle;
+  //indication characteristic value from server
+  uint8_t * button_char_value;
   //boolean to track GATT command
   bool gatt_procedure;
 

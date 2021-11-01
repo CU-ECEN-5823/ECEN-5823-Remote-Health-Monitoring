@@ -29,8 +29,10 @@
 #define sensor_pin  15
 #define lcd_port  gpioPortD
 #define lcd_pin   13
-#define button_port gpioPortF
-#define button_pin  6
+#define PB0_port gpioPortF
+#define PB0_pin  6
+#define PB1_port gpioPortF
+#define PB1_pin  7
 
 
 

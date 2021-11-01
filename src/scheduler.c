@@ -22,6 +22,14 @@ static const uint8_t thermo_service[2] = { 0x09, 0x18 };
 // Temperature Measurement characteristic UUID defined by Bluetooth SIG
 static const uint8_t thermo_char[2] = { 0x1c, 0x2a };
 
+// button state service UUID defined by Bluetooth SIG
+// 00000001-38c8-433e-87ec-652a2d136289
+static const uint8_t button_service[16] = { 0x89, 0x62, 0x13, 0x2d, 0x2a, 0x65, 0xec, 0x87, 0x3e, 0x43, 0xc8, 0x38, 0x01, 0x00, 0x00, 0x00 };
+// button state characteristic UUID defined by Bluetooth SIG
+// 00000002-38c8-433e-87ec-652a2d136289
+static const uint8_t button_char[16] = { 0x89, 0x62, 0x13, 0x2d, 0x2a, 0x65, 0xec, 0x87, 0x3e, 0x43, 0xc8, 0x38, 0x02, 0x00, 0x00, 0x00 };
+
+
 #endif
 
 //enum for interrupt based events
@@ -42,8 +50,11 @@ typedef enum uint32_t {
   state3_write_wait,
   state4_read,
   state0_idle_client,
+  state0_get_another_service,
   state1_got_services,
+  state1_got_another_services,
   state2_got_char,
+  state2_got_another_char,
   state3_set_indication,
   state4_wait_for_close,
   MY_NUM_STATES,
@@ -309,16 +320,42 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       //wait for connection open event
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_opened_id) {
 
-          //gatt command in process
-          bleData->gatt_procedure = true;
+          //LOG_INFO("Discovering services\n\r");
 
           //Discover primary services with the specified UUID in a remote GATT database.
           rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
                                                             sizeof(thermo_service),
                                                             (const uint8_t*)thermo_service);
           if(rc != SL_STATUS_OK) {
-              LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
+              LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() 1 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
+
+          //gatt command in process
+          bleData->gatt_procedure = true;
+
+          nextState = state0_get_another_service;          //default
+      }
+      break;
+
+      //discover button state service
+    case state0_get_another_service:
+      nextState = state0_get_another_service;          //default
+
+      //wait for previous gatt command to be completed
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
+
+
+          //LOG_INFO("Discovering services 2\n\r");
+
+          rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
+                                                            sizeof(button_service),
+                                                            (const uint8_t*)button_service);
+          if(rc != SL_STATUS_OK) {
+              LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
+          }
+
+          //gatt command in process
+          bleData->gatt_procedure = true;
 
           nextState = state1_got_services;
       }
@@ -332,8 +369,8 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       //wait for previous gatt command to be completed
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
-          //gatt command in process
-          bleData->gatt_procedure = true;
+          //LOG_INFO("Discovering characteristics\n\r");
+
 
           //Discover all characteristics of a GATT service in a remote GATT database
           // having the specified UUID
@@ -342,9 +379,37 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
                                                            sizeof(thermo_char),
                                                            (const uint8_t*)thermo_char);
           if(rc != SL_STATUS_OK) {
-              LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
+              LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() 1 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
 
+          //gatt command in process
+          bleData->gatt_procedure = true;
+
+          nextState = state1_got_another_services;
+      }
+
+      break;
+
+      //discover button state characteristics
+    case state1_got_another_services:
+      nextState = state1_got_another_services;
+
+      //wait for previous gatt command to be completed
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
+
+
+          // LOG_INFO("Discovering services 2\n\r");
+
+          rc = sl_bt_gatt_discover_characteristics_by_uuid(bleData->connection_handle,
+                                                           bleData->button_service_handle,
+                                                           sizeof(button_char),
+                                                           (const uint8_t*)button_char);
+          if(rc != SL_STATUS_OK) {
+              LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
+          }
+
+          //gatt command in process
+          bleData->gatt_procedure = true;
 
           nextState = state2_got_char;
       }
@@ -352,14 +417,15 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       break;
 
       //got characteristic from server
+      //enable indications for temperature service
     case state2_got_char:
       nextState = state2_got_char;
 
       //wait for previous gatt command to be completed
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
-          //gatt command in process
-          bleData->gatt_procedure = true;
+          //LOG_INFO("Enabling notifications\n\r");
+
 
           //enable indications sent from server
           rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
@@ -369,6 +435,34 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
               LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
 
+          //gatt command in process
+          bleData->gatt_procedure = true;
+
+          nextState = state2_got_another_char;
+      }
+
+      break;
+
+      //enble indications for button state service
+    case state2_got_another_char:
+      nextState = state2_got_another_char;
+
+      //wait for previous gatt command to be completed
+      if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
+
+
+          ///LOG_INFO("Enabling notifications 2\n\r");
+
+          rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
+                                                          bleData->button_char_handle,
+                                                          sl_bt_gatt_indication);
+          if(rc != SL_STATUS_OK) {
+              LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
+          }
+
+          //gatt command in process
+          bleData->gatt_procedure = true;
+          bleData->button_indication = true;
 
           displayPrintf(DISPLAY_ROW_CONNECTION, "Handling indications");
           nextState = state3_set_indication;

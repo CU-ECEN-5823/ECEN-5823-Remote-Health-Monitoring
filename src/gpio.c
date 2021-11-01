@@ -41,8 +41,11 @@ void gpioInit()
   GPIO_DriveStrengthSet(lcd_port, gpioDriveStrengthWeakAlternateWeak);
   GPIO_PinModeSet(lcd_port, lcd_pin, gpioModePushPull, false);
 
-  GPIO_PinModeSet(button_port, button_pin, gpioModeInputPullFilter, true);
-  GPIO_ExtIntConfig(button_port, button_pin, button_pin, true, true, true);
+  GPIO_PinModeSet(PB0_port, PB0_pin, gpioModeInputPullFilter, true);
+  GPIO_ExtIntConfig(PB0_port, PB0_pin, PB0_pin, true, true, true);
+
+  GPIO_PinModeSet(PB1_port, PB1_pin, gpioModeInputPullFilter, true);
+  GPIO_ExtIntConfig(PB1_port, PB1_pin, PB1_pin, true, true, true);
 
 } // gpioInit()
 
