@@ -26,7 +26,9 @@ void i2c_init();
 float convertTemp();
 
 //function to write a command to slave
-void write_cmd();
+void write_cmd(uint8_t cmd_data);
+
+void write_data(uint8_t reg, uint8_t opcode);
 
 //function to read temperature from sensor
 void read_cmd();
