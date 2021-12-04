@@ -275,7 +275,7 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
               NVIC_DisableIRQ(I2C0_IRQn);
 
               //log temperature value
-              //LOG_INFO("Temp = %f C\n\r", convertTemp());
+             // LOG_INFO("Temp = %f C\n\r", convertTemp());
 
               //send temperature indication to client
               ble_SendTemp();
@@ -456,6 +456,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
                                                           bleData->button_char_handle,
                                                           sl_bt_gatt_indication);
+
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }

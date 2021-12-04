@@ -61,11 +61,12 @@
 #include "src/scheduler.h"
 #include "src/i2c.h"
 #include "src/ble.h"
+#include "src/SparkFun_APDS9960.h"
 
 // #defines to select energy mode
-//#define LOWEST_ENERGY_MODE 0
+#define LOWEST_ENERGY_MODE 0
 //#define LOWEST_ENERGY_MODE 1
-#define LOWEST_ENERGY_MODE 2
+//#define LOWEST_ENERGY_MODE 2
 //#define LOWEST_ENERGY_MODE 3
 
 //set timer period

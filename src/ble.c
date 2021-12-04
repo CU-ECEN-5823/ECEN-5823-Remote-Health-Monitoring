@@ -68,7 +68,7 @@ ble_data_struct_t * getBleDataPtr() {
 
 #if DEVICE_IS_BLE_SERVER
 //function to increment read and write pointer in circular buffer
-int inc_ptr(int ptr) {
+/*int inc_ptr(int ptr) {
 
   //reset the pointer value after reaching buffer limit
   if(ptr+1 >= MAX_PTR) {
@@ -155,7 +155,7 @@ int dequeue() {
   }
 
 
-}
+}*/
 
 //function to send temperature value indication to client
 void ble_SendTemp() {
@@ -166,7 +166,7 @@ void ble_SendTemp() {
   uint8_t flags = 0x00;
   ble_data_struct_t *bleData = getBleDataPtr();
 
-  struct buffer_entry indication_data;
+  //struct buffer_entry indication_data;
 
   //check if bluetooth is connected
   if(bleData->connected == true){
@@ -197,7 +197,7 @@ void ble_SendTemp() {
           if(bleData->indication_inFlight) {
 
               //save the characteristic values in a buffer_entry
-              indication_data.charHandle = gattdb_temperature_measurement;
+              /*indication_data.charHandle = gattdb_temperature_measurement;
               indication_data.bufferLength = 5;
               for(int i=0; i<5; i++)
                 indication_data.buffer[i] = htm_temperature_buffer[i];
@@ -209,7 +209,7 @@ void ble_SendTemp() {
               if(qc == 0)
                 bleData->queued_indication++;
               else
-                LOG_ERROR("Indication enqueue failed\n\r");
+                LOG_ERROR("Indication enqueue failed\n\r");*/
           }
 
           //send indication of temperature measurement if no indication is inFlight
@@ -225,7 +225,7 @@ void ble_SendTemp() {
 
                   //indication is sent i.e. indication is in flight
                   bleData->indication_inFlight = true;
-                  //LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
+                  LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
                   displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
               }
           }
@@ -239,7 +239,7 @@ void ble_SendButtonState(uint8_t value) {
 
   ble_data_struct_t *bleData = getBleDataPtr();
 
-  struct buffer_entry indication_data;
+  //struct buffer_entry indication_data;
 
   uint8_t button_value_buffer[2];
 
@@ -266,7 +266,7 @@ void ble_SendButtonState(uint8_t value) {
           if(bleData->indication_inFlight) {
 
               //save the characteristic values in a buffer_entry
-              indication_data.charHandle = gattdb_button_state;
+              /*indication_data.charHandle = gattdb_button_state;
               indication_data.bufferLength = 2;
               for(int i=0; i<2; i++)
                 indication_data.buffer[i] = button_value_buffer[i];
@@ -278,7 +278,7 @@ void ble_SendButtonState(uint8_t value) {
               if(qc == 0)
                 bleData->queued_indication++;
               else
-                LOG_ERROR("Indication enqueue failed\n\r");
+                LOG_ERROR("Indication enqueue failed\n\r");*/
           }
 
           //send indication of temperature measurement if no indication is inFlight
@@ -348,7 +348,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
   switch(SL_BT_MSG_ID(evt->header)) {
 
     //for both server and client
-
+    LOG_INFO("event = %x\n\r", evt->header);
     //system boot event
     //Indicates that the device has started and the radio is ready
     case sl_bt_evt_system_boot_id:
@@ -511,7 +511,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                     bleData->myAddress.addr[3],
                     bleData->myAddress.addr[4],
                     bleData->myAddress.addr[5]);
-      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "A9");
+      displayPrintf(DISPLAY_ROW_ASSIGNMENT, "Final Project");
 
       //initialize connection and indication flags
       bleData->connected           = false;
@@ -720,55 +720,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //Indicates that the external signals have been received
     case sl_bt_evt_system_external_signal_id:
 
-#if !DEVICE_IS_BLE_SERVER
-
-      //detect button press sequence to change indication status for button state service
-      //check if PB0 is pressed once
-      if(evt->data.evt_system_external_signal.extsignals == evt_ButtonPressed && bleData->button_pressed)
-        bleData->press_seq = 1;
-
-      //check if PB1 is pressed while PB0 is pressed, if yes break from the loop
-      if((bleData->press_seq == 1) && bleData->pb1_button_pressed && evt->data.evt_system_external_signal.extsignals == evt_ButtonPressed) {
-          bleData->press_seq = 2;
-          //break;
-      }
-
-      //check if PB1 is released in sequence, if yes break from the loop
-      if((bleData->press_seq == 2) && !bleData->pb1_button_pressed && evt->data.evt_system_external_signal.extsignals == evt_ButtonReleased) {
-          bleData->press_seq = 3;
-          break;
-      }
-
-      //check if PB0 is released in sequence, if yes break from the loop after toggling indication status for button state
-      if((bleData->press_seq == 3) && !bleData->button_pressed && evt->data.evt_system_external_signal.extsignals == evt_ButtonReleased) {
-          if(bleData->button_indication) {
-              sc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
-                                                              bleData->button_char_handle,
-                                                              sl_bt_gatt_disable);
-              if(sc != SL_STATUS_OK) {
-                  LOG_ERROR("sl_bt_gatt_set_characteristic_notification() 1 returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-              }
-              else {
-                  // LOG_INFO("Disables indications from client\n\r");
-              }
-          }
-          else {
-              sc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
-                                                              bleData->button_char_handle,
-                                                              sl_bt_gatt_indication);
-              if(sc != SL_STATUS_OK) {
-                  LOG_ERROR("sl_bt_gatt_set_characteristic_notification() 2 returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-              }
-              else {
-                  // LOG_INFO("Enables indications from client\n\r");
-              }
-          }
-          break;
-
-      }
-
-#endif
-
       //check for button pressed event
       if(evt->data.evt_system_external_signal.extsignals == evt_ButtonPressed) {
 
@@ -785,6 +736,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           //if PB1 is pressed, read button state service characteristic value
 #if !DEVICE_IS_BLE_SERVER
           if(bleData->pb1_button_pressed) {
+              LOG_INFO("PB1 button pressed\n\r");
               sc = sl_bt_gatt_read_characteristic_value(bleData->connection_handle,
                                                         bleData->button_char_handle);
               if(sc != SL_STATUS_OK) {
@@ -815,7 +767,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
             ble_SendButtonState(0x00);
       }
 
-
 #endif
 
       break;
@@ -827,7 +778,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
 #if DEVICE_IS_BLE_SERVER
       //check for any indications queued or if any indication is inFlight
-      if(bleData->queued_indication!=0 && !bleData->indication_inFlight) {
+      /*if(bleData->queued_indication!=0 && !bleData->indication_inFlight) {
 
           //read data and send indication
           qc = dequeue();
@@ -835,7 +786,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           if(qc != 0)
             LOG_ERROR("Indication dequeue failed\n\r");
 
-      }
+      }*/
 
 
 
@@ -987,12 +938,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           }
       }
 
-      //toggle indication state if required button press sequence detected
-      if(bleData->press_seq == 3) {
-          bleData->press_seq = 0;
-          bleData->button_indication = !bleData->button_indication;
-      }
-
       bleData->gatt_procedure = false;
 
       break;
@@ -1078,7 +1023,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //check if we got a read response, if yes show button on lcd
       if(evt->data.evt_gatt_characteristic_value.att_opcode == sl_bt_gatt_read_response) {
           if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x01) {
-              displayPrintf(DISPLAY_ROW_9, "Button Pressed");
+              displayPrintf(DISPLAY_ROW_9, "Start gesture");
           }
           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x00){
               displayPrintf(DISPLAY_ROW_9, "Button Released");
@@ -1088,7 +1033,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //display button state on client
       if(bleData->bonded && bleData->button_indication && (evt->data.evt_gatt_characteristic_value.characteristic == bleData->button_char_handle)) {
           if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x01) {
-              displayPrintf(DISPLAY_ROW_9, "Button Pressed");
+              displayPrintf(DISPLAY_ROW_9, "Start gesture");
           }
           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x00){
               displayPrintf(DISPLAY_ROW_9, "Button Released");
@@ -1099,5 +1044,21 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
 #endif
 
+    case sl_bt_evt_gatt_server_user_read_request_id:
+
+       LOG_INFO("read char request from client\n\r");
+       displayPrintf(DISPLAY_ROW_9, "Read request");
+
+       sc = sl_bt_gatt_server_send_user_read_response(bleData->connection_handle,
+                                                             bleData->button_char_handle,
+                                                             0,
+                                                             1,
+                                                             (uint8_t *)1,
+                                                             (uint16_t *)1);
+       if(sc != SL_STATUS_OK) {
+                         LOG_ERROR("sl_bt_gatt_server_send_user_read_response() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+                     }
+
+       break;
   }
 }

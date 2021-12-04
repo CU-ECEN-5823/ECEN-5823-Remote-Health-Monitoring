@@ -101,7 +101,7 @@ void timerWaitUs_polled(uint32_t us_wait) {
   uint16_t desired_tick, current_cnt, required_cnt;
 
   //check function argument range
-  if((us_wait<(uint32_t)MIN_WAIT) | (us_wait>(uint32_t)MAX_WAIT)) {
+  /*if((us_wait<(uint32_t)MIN_WAIT) | (us_wait>(uint32_t)MAX_WAIT)) {
       LOG_ERROR("TimerWait range\n\r");
 
       //clamp wait time value
@@ -112,7 +112,7 @@ void timerWaitUs_polled(uint32_t us_wait) {
       else if(us_wait > (uint16_t)MAX_WAIT) {
           us_wait = MAX_WAIT;
       }
-  }
+  }*/
 
   desired_tick = (us_wait/CLK_RES);           //calculate required timer ticks
 

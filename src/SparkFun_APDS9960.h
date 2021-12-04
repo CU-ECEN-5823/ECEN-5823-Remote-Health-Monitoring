@@ -46,7 +46,7 @@
 #define APDS9960_ID_2           0x9C
 
 /* Misc parameters */
-#define FIFO_PAUSE_TIME         30      // Wait period (ms) between FIFO reads
+#define FIFO_PAUSE_TIME         30000      // Wait period (ms) between FIFO reads
 
 /* APDS-9960 register addresses */
 #define APDS9960_ENABLE         0x80
@@ -225,7 +225,7 @@ typedef struct gesture_data_type {
 } gesture_data_type;
 
 /* APDS9960 Class */
-struct SparkFun_APDS9960 {
+//struct SparkFun_APDS9960 {
 
     /* Initialization methods */
     bool SparkFun_APDS9960_init();
@@ -235,7 +235,8 @@ struct SparkFun_APDS9960 {
     bool enablePower();
     bool disablePower();
 
-    bool enableGestureSensor(bool interrupts = true);
+    //bool enableGestureSensor(bool interrupts = true);
+    bool enableGestureSensor(bool interrupts);
     bool disableGestureSensor();
 
     bool setGestureLEDDrive(uint8_t drive);
@@ -263,17 +264,20 @@ struct SparkFun_APDS9960 {
     /* Gesture mode */
     bool setGestureMode(uint8_t mode);
 
+    bool setLEDBoost(uint8_t boost);
+
+    gesture_data_type * getGestureDataPtr();
     /* Members */
-    gesture_data_type gesture_data;
-    int gesture_ud_delta;
+    //gesture_data_type gesture_data;
+   /* int gesture_ud_delta;
     int gesture_lr_delta;
     int gesture_ud_count;
     int gesture_lr_count;
     int gesture_near_count;
     int gesture_far_count;
     int gesture_state;
-    int gesture_motion;
-};
+    int gesture_motion;*/
+//};
 
 #endif
 
