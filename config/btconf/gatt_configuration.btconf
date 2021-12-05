@@ -159,7 +159,7 @@
   </service>
   
   <!--ECEN5823 Gesture sensor-->
-  <service advertise="true" id="gesture_sensor" name="ECEN5823 Gesture sensor" requirement="mandatory" sourceId="" type="primary" uuid="d38b2e9b-966c-4426-bda0-9c017e23bb35">
+  <service advertise="true" name="ECEN5823 Gesture sensor" requirement="mandatory" sourceId="" type="primary" uuid="d38b2e9b-966c-4426-bda0-9c017e23bb35">
     <informativeText/>
     
     <!--ECEN5823 Gesture sensor state-->
@@ -183,7 +183,7 @@
   </service>
   
   <!--ECEN5823 Pulse oximeter-->
-  <service advertise="true" id="pulse_oximeter" name="ECEN5823 Pulse oximeter" requirement="mandatory" sourceId="" type="primary" uuid="ee63a26e-8809-4038-8c7c-341ed4042818">
+  <service advertise="true" name="ECEN5823 Pulse oximeter" requirement="mandatory" sourceId="" type="primary" uuid="ee63a26e-8809-4038-8c7c-341ed4042818">
     <informativeText/>
     
     <!--ECEN5823 Pulse oximeter state-->

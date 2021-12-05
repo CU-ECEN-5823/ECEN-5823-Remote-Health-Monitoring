@@ -30,8 +30,6 @@ void schedulerSetEventButtonReleased();
 
 void schedulerSetGestureEvent();
 
-void schedulerGotGesture();
-
 //function to get scheduler event
 uint32_t getNextEvent();
 

@@ -61,6 +61,10 @@ typedef struct {
   bool    indication;
   //flag to check if push button indication is on
   bool button_indication;
+
+  bool gesture_indication;
+
+  bool oximeter_indication;
   //flag to check if indication is in flight
   bool    indication_inFlight;
   //rollover count variable
@@ -99,24 +103,30 @@ typedef struct {
   //boolean to track GATT command
   bool gatt_procedure;
 
-  uint8_t gesture_value;
+  //button service handle
+  uint32_t gesture_service_handle;
+  //button characteristic handle
+  uint16_t gesture_char_handle;
+
+  uint8_t * gesture_value;
+
+  //button service handle
+  uint32_t oximeter_service_handle;
+  //button characteristic handle
+  uint16_t oximeter_char_handle;
 
 
 } ble_data_struct_t;
 
 ble_data_struct_t* getBleDataPtr(void);
 
-int inc_ptr(int ptr);
-
-int enqueue(struct buffer_entry write_data);
-
-int dequeue();
-
 #if DEVICE_IS_BLE_SERVER
 
 void ble_SendTemp();
 
 void ble_SendButtonState(uint8_t value);
+
+void ble_SendGestureState(uint8_t value);
 
 #endif
 

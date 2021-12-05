@@ -26,7 +26,6 @@ enum {
   evt_TransferDone,
   evt_ButtonPressed,
   evt_ButtonReleased,
-  evt_GotGesture,
 };
 
 // BLE private data
@@ -183,6 +182,61 @@ void ble_SendButtonState(uint8_t value) {
                                                      gattdb_button_state,
                                                      2,
                                                      &button_value_buffer[0]);
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+
+              else {
+
+                  //indication is sent i.e. indication is in flight
+                  bleData->indication_inFlight = true;
+                  //LOG_INFO("Sent Button indication, value=%d\n\r", value);
+              }
+          }
+      }
+  }
+
+}
+
+//function to send button state indication
+void ble_SendGestureState(uint8_t value) {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  //struct buffer_entry indication_data;
+
+  uint8_t gesture_value_buffer[2];
+
+  gesture_value_buffer[0] = value;
+  gesture_value_buffer[1] = 0;
+
+  //check if Bluetooth is connected
+  if(bleData->connected == true){
+
+      //write button state in gatt database
+      /*sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_gesture_state,
+                                                               0,
+                                                               1,
+                                                               &gesture_value_buffer[0]);
+
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }*/
+
+      //check if indication is on and server and client are bonded
+      if (bleData->gesture_indication && bleData->bonded) {
+
+          //check if any indication is inFlight
+          if(bleData->indication_inFlight) {
+
+          }
+
+          //send indication of temperature measurement if no indication is inFlight
+          else {
+              sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
+                                                     gattdb_gesture_state,
+                                                     2,
+                                                     &gesture_value_buffer[0]);
               if(sc != SL_STATUS_OK) {
                   LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
               }
@@ -673,16 +727,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           }
       }
 
-#if DEVICE_IS_BLE_SERVER
-
-      if(evt->data.evt_system_external_signal.extsignals == evt_GotGesture) {
-
-          //disableGestureSensor();
-          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
-      }
-
-#endif
-
       break;
 
       //Indicates that a soft timer has lapsed.
@@ -702,6 +746,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       indication */
     case sl_bt_evt_gatt_server_characteristic_status_id:
 
+      LOG_INFO("characteristic changed by client\n\r");
+
       //check if temperature measurement characteristic is changed
       /*PACKSTRUCT( struct sl_bt_evt_gatt_server_characteristic_status_s
       {
@@ -717,7 +763,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
         uint16_t client_config;       The handle of client-config descriptor. */
 
       //check if the characteristic change is for HTM
-      if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_temperature_measurement) {
+      if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_gesture_state) {
 
           //check if any status flag has been changed by client
           if (sl_bt_gatt_server_client_config == (sl_bt_gatt_server_characteristic_status_flag_t)
@@ -725,16 +771,18 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
               //check if indication flag is disabled
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
-                  bleData->indication = false;
+                  bleData->gesture_indication = false;
                   gpioLed0SetOff();
-                  displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
+                  displayPrintf(DISPLAY_ROW_9, "");
+                  LOG_INFO("gesture indication off\n\r");
 
               }
 
               //check if indication flag is enabled
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
-                  bleData->indication = true;
+                  bleData->gesture_indication = true;
                   gpioLed0SetOn();
+                  LOG_INFO("gesture indication on\n\r");
               }
 
           }
@@ -742,7 +790,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       }
 
       //check if the characteristic change is from Push button
-      if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_button_state) {
+      if(evt->data.evt_gatt_server_characteristic_status.characteristic == gattdb_oximeter_state) {
 
           //check if any status flag has been changed by client
           if (sl_bt_gatt_server_client_config == (sl_bt_gatt_server_characteristic_status_flag_t)
@@ -750,15 +798,17 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
               //check if indication flag is disabled
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
-                  bleData->button_indication = false;
+                  bleData->oximeter_indication = false;
                   gpioLed1SetOff();
+                  LOG_INFO("oximeter indication off\n\r");
 
               }
 
               //check if indication flag is enabled
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
-                  bleData->button_indication = true;
+                  bleData->oximeter_indication = true;
                   gpioLed1SetOn();
+                  LOG_INFO("oximeter indication on\n\r");
               }
 
           }
@@ -858,8 +908,16 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //save service handle
       if(memcmp(evt->data.evt_gatt_service.uuid.data, thermo_service, sizeof(thermo_service)) == 0)
         bleData->service_handle = evt->data.evt_gatt_service.service;
-      else if(memcmp(evt->data.evt_gatt_service.uuid.data, button_service, sizeof(button_service)) == 0)
+      else if(memcmp(evt->data.evt_gatt_service.uuid.data, button_service, sizeof(button_service)) == 0) {
+          //LOG_INFO("memcmp button_service\n\r");
         bleData->button_service_handle = evt->data.evt_gatt_service.service;
+      }
+      else if(memcmp(evt->data.evt_gatt_service.uuid.data, gesture_service, sizeof(gesture_service)) == 0) {
+          //LOG_INFO("memcmp gesture_service\n\r");
+              bleData->gesture_service_handle = evt->data.evt_gatt_service.service;
+      }
+      else if(memcmp(evt->data.evt_gatt_service.uuid.data, oximeter_service, sizeof(oximeter_service)) == 0)
+              bleData->oximeter_service_handle = evt->data.evt_gatt_service.service;
       break;
 
       // Indicates that a GATT characteristic in the remote GATT database was
@@ -881,6 +939,10 @@ void handle_ble_event(sl_bt_msg_t *evt) {
         bleData->char_handle = evt->data.evt_gatt_characteristic.characteristic;
       else if(memcmp(evt->data.evt_gatt_characteristic.uuid.data, button_char, sizeof(button_char)) == 0)
         bleData->button_char_handle = evt->data.evt_gatt_characteristic.characteristic;
+      else if(memcmp(evt->data.evt_gatt_characteristic.uuid.data, gesture_char, sizeof(gesture_char)) == 0)
+              bleData->gesture_char_handle = evt->data.evt_gatt_characteristic.characteristic;
+      else if(memcmp(evt->data.evt_gatt_characteristic.uuid.data, oximeter_char, sizeof(oximeter_char)) == 0)
+              bleData->oximeter_char_handle = evt->data.evt_gatt_characteristic.characteristic;
       break;
 
       // Indicates that the value of one or several characteristics in the
