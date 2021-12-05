@@ -72,20 +72,10 @@ typedef struct {
   //flag to check if push button is pressed
   bool button_pressed;
   bool pb1_button_pressed;
-  int press_seq;
   //flag to check if server and client are bonded
   bool bonded;
   //variable to save bonding passkey
   uint32_t passkey;
-
-  //array of structure for indication data
-  struct buffer_entry indication_buffer[MAX_PTR];
-  //variable to store read and write pointer of circular buffer
-  uint8_t rptr, wptr;
-  //flag to check if the circular buffer is full
-  bool full;
-  //variable to keep track of queued indications
-  uint8_t queued_indication;
 
   // values unique for client
   //temperature service handle
@@ -98,17 +88,11 @@ typedef struct {
   uint32_t button_service_handle;
   //button characteristic handle
   uint16_t button_char_handle;
-  //indication characteristic value from server
-  uint8_t * button_char_value;
-  //boolean to track GATT command
-  bool gatt_procedure;
 
   //button service handle
   uint32_t gesture_service_handle;
   //button characteristic handle
   uint16_t gesture_char_handle;
-
-  uint8_t * gesture_value;
 
   //button service handle
   uint32_t oximeter_service_handle;

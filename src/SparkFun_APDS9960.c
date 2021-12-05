@@ -63,7 +63,7 @@ bool SparkFun_APDS9960_init()
       return false;
   }
   else {
-      LOG_INFO("First write_read successful\n\r");
+      //LOG_INFO("First write_read successful\n\r");
   }
 
   /* Set ENABLE register to 0 (disable all features) */

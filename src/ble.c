@@ -134,7 +134,7 @@ void ble_SendTemp() {
 
                   //indication is sent i.e. indication is in flight
                   bleData->indication_inFlight = true;
-                  LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
+                  //LOG_INFO("Sent HTM indication, temp=%f\n\r", temperature_in_c);
                   displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%f", temperature_in_c);
               }
           }
@@ -214,21 +214,21 @@ void ble_SendGestureState(uint8_t value) {
   if(bleData->connected == true){
 
       //write button state in gatt database
-      /*sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_gesture_state,
+      sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_gesture_state,
                                                                0,
                                                                1,
                                                                &gesture_value_buffer[0]);
 
       if(sc != SL_STATUS_OK) {
           LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-      }*/
+      }
 
       //check if indication is on and server and client are bonded
       if (bleData->gesture_indication && bleData->bonded) {
 
           //check if any indication is inFlight
           if(bleData->indication_inFlight) {
-
+              //LOG_INFO("Cannot send gesture reading, indication inflight\n\r");
           }
 
           //send indication of temperature measurement if no indication is inFlight
@@ -245,7 +245,7 @@ void ble_SendGestureState(uint8_t value) {
 
                   //indication is sent i.e. indication is in flight
                   bleData->indication_inFlight = true;
-                  //LOG_INFO("Sent Button indication, value=%d\n\r", value);
+                  //LOG_INFO("Sent gesture indication, value=%d\n\r", value);
               }
           }
       }
@@ -462,15 +462,11 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->bonded           = false;
       bleData->indication          = false;
       bleData->button_indication   = false;
+      bleData->gesture_indication   = false;
+      bleData->oximeter_indication   = false;
       bleData->indication_inFlight = false;
-      bleData->gatt_procedure      = false;
-      bleData->rptr = 0;
-      bleData->wptr = 0;
-      bleData->queued_indication = 0;
       bleData->button_pressed = false;
       bleData->pb1_button_pressed = false;
-      bleData->press_seq = 0;
-      bleData->gesture_value = 0;
 
       break;
 
@@ -550,15 +546,11 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->bonded           = false;
       bleData->indication          = false;
       bleData->button_indication   = false;
+      bleData->gesture_indication   = false;
+      bleData->oximeter_indication   = false;
       bleData->indication_inFlight = false;
-      bleData->gatt_procedure      = false;
-      bleData->rptr = 0;
-      bleData->wptr = 0;
-      bleData->queued_indication = 0;
       bleData->button_pressed = false;
       bleData->pb1_button_pressed = false;
-      bleData->press_seq = 0;
-      bleData->gesture_value = 0;
 
       //delete bonding data from server
       sc = sl_bt_sm_delete_bondings();
@@ -684,7 +676,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                   LOG_ERROR("Error initializing APDS\n\r");
               }
               else {
-                  LOG_INFO("APDS initialized\n\r");
+                  //LOG_INFO("APDS initialized\n\r");
               }
 
               ret = enableGestureSensor(true);
@@ -692,21 +684,19 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                   LOG_ERROR("Error enabling gesture\n\r");
               }
               else {
-                  LOG_INFO("gesture enabled\n\r");
+                  //LOG_INFO("gesture enabled\n\r");
                   displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
 
               }
 
           }
 
-
-
 #endif
 
           //if PB1 is pressed, read button state service characteristic value
 #if !DEVICE_IS_BLE_SERVER
           if(bleData->pb1_button_pressed) {
-              LOG_INFO("PB1 button pressed\n\r");
+              //LOG_INFO("PB1 button pressed\n\r");
               sc = sl_bt_gatt_read_characteristic_value(bleData->connection_handle,
                                                         bleData->button_char_handle);
               if(sc != SL_STATUS_OK) {
@@ -746,8 +736,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       indication */
     case sl_bt_evt_gatt_server_characteristic_status_id:
 
-      LOG_INFO("characteristic changed by client\n\r");
-
       //check if temperature measurement characteristic is changed
       /*PACKSTRUCT( struct sl_bt_evt_gatt_server_characteristic_status_s
       {
@@ -774,7 +762,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                   bleData->gesture_indication = false;
                   gpioLed0SetOff();
                   displayPrintf(DISPLAY_ROW_9, "");
-                  LOG_INFO("gesture indication off\n\r");
+                  //LOG_INFO("gesture indication off\n\r");
 
               }
 
@@ -782,7 +770,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
                   bleData->gesture_indication = true;
                   gpioLed0SetOn();
-                  LOG_INFO("gesture indication on\n\r");
+                  //LOG_INFO("gesture indication on\n\r");
               }
 
           }
@@ -800,7 +788,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
                   bleData->oximeter_indication = false;
                   gpioLed1SetOff();
-                  LOG_INFO("oximeter indication off\n\r");
+                  //LOG_INFO("oximeter indication off\n\r");
 
               }
 
@@ -808,7 +796,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
                   bleData->oximeter_indication = true;
                   gpioLed1SetOn();
-                  LOG_INFO("oximeter indication on\n\r");
+                  //LOG_INFO("oximeter indication on\n\r");
               }
 
           }
@@ -818,6 +806,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //check if indication confirmation has been received from client
       if (sl_bt_gatt_server_confirmation == (sl_bt_gatt_server_characteristic_status_flag_t)
           evt->data.evt_gatt_server_characteristic_status.status_flags) {
+          //LOG_INFO("Received indication confirmation\n\r");
           bleData->indication_inFlight = false;
       }
 
@@ -886,8 +875,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           }
       }
 
-      bleData->gatt_procedure = false;
-
       break;
 
       // Indicate that a GATT service in the remote GATT database was
@@ -949,6 +936,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       // remote GATT server was received
     case sl_bt_evt_gatt_characteristic_value_id:
 
+      //LOG_INFO("GATT char value event client\n\r");
+
       /*PACKSTRUCT( struct sl_bt_evt_gatt_characteristic_value_s
       {
         uint8_t    connection;     < Connection handle
@@ -966,22 +955,57 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       //check if we got an indication, if yes send a confirmation to server
       if(evt->data.evt_gatt_characteristic_value.att_opcode == sl_bt_gatt_handle_value_indication) {
           sc = sl_bt_gatt_send_characteristic_confirmation(bleData->connection_handle);
+          //LOG_INFO("got indication, sending confirmation\n\r");
 
           if(sc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
           }
+
+          if(evt->data.evt_gatt_characteristic_value.characteristic == bleData->char_handle) {
+              //save value got from server in a variable
+              bleData->char_value = &(evt->data.evt_gatt_characteristic_value.value.data[0]);
+
+              temperature_in_c = FLOAT_TO_INT32((bleData->char_value));
+              displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%d", temperature_in_c);
+          }
+
+          if(evt->data.evt_gatt_characteristic_value.characteristic == bleData->gesture_char_handle) {
+                    //LOG_INFO("Got gesture indication\n\r");
+                          if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x01) {
+                              displayPrintf(DISPLAY_ROW_9, "Gesture = LEFT");
+                          }
+                          else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x02){
+                              displayPrintf(DISPLAY_ROW_9, "Gesture = RIGHT");
+                          }
+                          else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x03){
+                                              displayPrintf(DISPLAY_ROW_9, "Gesture = UP");
+                                          }
+                          else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x04){
+                                              displayPrintf(DISPLAY_ROW_9, "Gesture = DOWN");
+                                          }
+                          else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x05){
+                                              displayPrintf(DISPLAY_ROW_9, "Gesture = NEAR");
+                                          }
+                          else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x06){
+                                              displayPrintf(DISPLAY_ROW_9, "Gesture = FAR");
+                                          }
+                          else {
+                              displayPrintf(DISPLAY_ROW_9, "Gesture = NONE");
+                          }
+
+                          if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x04){
+                              displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
+                          }
+                          else {
+                              displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
+                          }
+                }
       }
 
-      if(evt->data.evt_gatt_characteristic_value.characteristic == bleData->char_handle) {
-          //save value got from server in a variable
-          bleData->char_value = &(evt->data.evt_gatt_characteristic_value.value.data[0]);
 
-          temperature_in_c = FLOAT_TO_INT32((bleData->char_value));
-          displayPrintf(DISPLAY_ROW_TEMPVALUE, "Temp=%d", temperature_in_c);
-      }
 
       //check if we got a read response, if yes show button on lcd
-      if(evt->data.evt_gatt_characteristic_value.att_opcode == sl_bt_gatt_read_response) {
+     /* if(evt->data.evt_gatt_characteristic_value.att_opcode == sl_bt_gatt_read_response) {
           if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x01) {
               displayPrintf(DISPLAY_ROW_9, "Start gesture");
           }
@@ -998,7 +1022,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x00){
               displayPrintf(DISPLAY_ROW_9, "Button Released");
           }
-      }
+      }*/
+
 
       break;
 

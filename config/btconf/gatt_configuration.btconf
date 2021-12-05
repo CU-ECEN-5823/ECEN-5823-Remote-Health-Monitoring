@@ -167,6 +167,7 @@
       <informativeText/>
       <value length="1" type="hex" variable_length="false">00</value>
       <properties>
+        <read authenticated="false" bonded="true" encrypted="false"/>
         <indicate authenticated="false" bonded="false" encrypted="false"/>
       </properties>
       
@@ -191,6 +192,7 @@
       <informativeText/>
       <value length="8" type="hex" variable_length="false">00</value>
       <properties>
+        <read authenticated="false" bonded="true" encrypted="false"/>
         <indicate authenticated="false" bonded="false" encrypted="false"/>
       </properties>
       

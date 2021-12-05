@@ -178,7 +178,7 @@ void handle_gesture() {
       switch ( readGesture() ) {
 
         case DIR_UP:
-          LOG_INFO("DOWN\n\r");
+          //LOG_INFO("DOWN\n\r");
           displayPrintf(DISPLAY_ROW_9, "Gesture = DOWN");
           disableGestureSensor();
           displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
@@ -188,7 +188,7 @@ void handle_gesture() {
           break;
 
         case DIR_DOWN:
-          LOG_INFO("UP\n\r");
+          //LOG_INFO("UP\n\r");
           displayPrintf(DISPLAY_ROW_9, "Gesture = UP");
           //LOG_INFO("Sending up gesture\n\r");
           ble_SendGestureState(0x03);
@@ -197,7 +197,7 @@ void handle_gesture() {
           break;
 
         case DIR_LEFT:
-          LOG_INFO("LEFT\n\r");
+          //LOG_INFO("LEFT\n\r");
           displayPrintf(DISPLAY_ROW_9, "Gesture = LEFT");
           //LOG_INFO("Sending left gesture\n\r");
           ble_SendGestureState(0x01);
@@ -206,7 +206,7 @@ void handle_gesture() {
           break;
 
         case DIR_RIGHT:
-          LOG_INFO("RIGHT\n\r");
+          //LOG_INFO("RIGHT\n\r");
           displayPrintf(DISPLAY_ROW_9, "Gesture = RIGHT");
 
           // LOG_INFO("Sending right gesture\n\r");
@@ -216,7 +216,7 @@ void handle_gesture() {
           break;
 
         case DIR_NEAR:
-          LOG_INFO("NEAR\n\r");
+          //LOG_INFO("NEAR\n\r");
           displayPrintf(DISPLAY_ROW_9, "Gesture = NEAR");
 
           // LOG_INFO("Sending near gesture\n\r");
@@ -226,7 +226,7 @@ void handle_gesture() {
           break;
 
         case DIR_FAR:
-          LOG_INFO("FAR\n\r");
+          //LOG_INFO("FAR\n\r");
           displayPrintf(DISPLAY_ROW_9, "Gesture = FAR");
 
           //LOG_INFO("Sending far gesture\n\r");
@@ -236,7 +236,7 @@ void handle_gesture() {
           break;
 
         default:
-          LOG_INFO("NONE");
+          //LOG_INFO("NONE");
           displayPrintf(DISPLAY_ROW_9, "Gesture = NONE");
       }
   }
@@ -430,7 +430,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       //wait for connection open event
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_opened_id) {
 
-          LOG_INFO("Discovering services\n\r");
+          //LOG_INFO("Discovering services\n\r");
 
           //Discover primary services with the specified UUID in a remote GATT database.
           rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
@@ -439,9 +439,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() 1 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state1_get_temp_char;          //default
       }
@@ -454,7 +451,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
        //wait for previous gatt command to be completed
        if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
-           LOG_INFO("Discovering characteristics\n\r");
+           //LOG_INFO("Discovering characteristics\n\r");
 
 
            //Discover all characteristics of a GATT service in a remote GATT database
@@ -466,9 +463,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
            if(rc != SL_STATUS_OK) {
                LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() 1 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
            }
-
-           //gatt command in process
-           bleData->gatt_procedure = true;
 
            nextState = state2_set_temp_ind;
        }
@@ -483,7 +477,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
         //wait for previous gatt command to be completed
         if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
-            LOG_INFO("Enabling notifications\n\r");
+            //LOG_INFO("Enabling notifications\n\r");
 
 
             //enable indications sent from server
@@ -493,9 +487,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
             if(rc != SL_STATUS_OK) {
                 LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
             }
-
-            //gatt command in process
-            bleData->gatt_procedure = true;
 
             nextState = state0_get_button_service;
         }
@@ -510,7 +501,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-          LOG_INFO("Discovering services 2\n\r");
+          //LOG_INFO("Discovering services 2\n\r");
 
           rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
                                                             sizeof(button_service),
@@ -518,9 +509,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state1_get_button_char;
       }
@@ -535,7 +523,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-          LOG_INFO("Discovering services 2\n\r");
+          //LOG_INFO("Discovering services 2\n\r");
 
           rc = sl_bt_gatt_discover_characteristics_by_uuid(bleData->connection_handle,
                                                            bleData->button_service_handle,
@@ -544,9 +532,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state2_set_button_ind;
       }
@@ -561,7 +546,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
        if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-           LOG_INFO("Enabling notifications 2\n\r");
+           //LOG_INFO("Enabling notifications 2\n\r");
 
            rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
                                                            bleData->button_char_handle,
@@ -571,8 +556,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
                LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
            }
 
-           //gatt command in process
-           bleData->gatt_procedure = true;
            bleData->button_indication = true;
 
            //displayPrintf(DISPLAY_ROW_CONNECTION, "Handling indications");
@@ -589,7 +572,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
       //if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_connection_opened_id) {
 
-          LOG_INFO("Discovering services 3\n\r");
+          //LOG_INFO("Discovering services 3\n\r");
 
           rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
                                                             sizeof(gesture_service),
@@ -597,9 +580,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state1_get_gesture_char;
       }
@@ -614,7 +594,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-          LOG_INFO("Discovering services 3\n\r");
+          //LOG_INFO("Discovering services 3\n\r");
 
           rc = sl_bt_gatt_discover_characteristics_by_uuid(bleData->connection_handle,
                                                            bleData->gesture_service_handle,
@@ -623,9 +603,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state2_set_gesture_ind;
       }
@@ -640,7 +617,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
        if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-           LOG_INFO("Enabling notifications 3\n\r");
+           //LOG_INFO("Enabling notifications 3\n\r");
 
            rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
                                                            bleData->gesture_char_handle,
@@ -650,8 +627,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
                LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
            }
 
-           //gatt command in process
-           bleData->gatt_procedure = true;
            bleData->gesture_indication = true;
 
            //displayPrintf(DISPLAY_ROW_CONNECTION, "Handling indications");
@@ -668,7 +643,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-          LOG_INFO("Discovering services 4\n\r");
+          //LOG_INFO("Discovering services 4\n\r");
 
           rc = sl_bt_gatt_discover_primary_services_by_uuid(bleData->connection_handle,
                                                             sizeof(oximeter_service),
@@ -676,9 +651,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_primary_services_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state1_get_oximeter_char;
       }
@@ -693,7 +665,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-          LOG_INFO("Discovering services 4\n\r");
+          //LOG_INFO("Discovering services 4\n\r");
 
           rc = sl_bt_gatt_discover_characteristics_by_uuid(bleData->connection_handle,
                                                            bleData->oximeter_service_handle,
@@ -702,9 +674,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
           if(rc != SL_STATUS_OK) {
               LOG_ERROR("sl_bt_gatt_discover_characteristics_by_uuid() 2 returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
-
-          //gatt command in process
-          bleData->gatt_procedure = true;
 
           nextState = state2_set_oximeter_ind;
       }
@@ -719,7 +688,7 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
       if(SL_BT_MSG_ID(evt->header) == sl_bt_evt_gatt_procedure_completed_id) {
 
 
-          LOG_INFO("Enabling notifications 4\n\r");
+          //LOG_INFO("Enabling notifications 4\n\r");
 
           rc = sl_bt_gatt_set_characteristic_notification(bleData->connection_handle,
                                                           bleData->oximeter_char_handle,
@@ -729,8 +698,6 @@ void discovery_state_machine(sl_bt_msg_t *evt) {
               LOG_ERROR("sl_bt_gatt_set_characteristic_notification() returned != 0 status=0x%04x\n\r", (unsigned int)rc);
           }
 
-          //gatt command in process
-          bleData->gatt_procedure = true;
           bleData->oximeter_indication = true;
 
           displayPrintf(DISPLAY_ROW_CONNECTION, "Handling indications");
