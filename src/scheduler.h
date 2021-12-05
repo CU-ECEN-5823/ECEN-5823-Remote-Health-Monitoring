@@ -28,6 +28,10 @@ void schedulerSetEventButtonPressed();
 
 void schedulerSetEventButtonReleased();
 
+void schedulerSetGestureEvent();
+
+void schedulerGotGesture();
+
 //function to get scheduler event
 uint32_t getNextEvent();
 
@@ -35,6 +39,10 @@ uint32_t getNextEvent();
 void temperature_state_machine(sl_bt_msg_t *evt);
 
 void discovery_state_machine(sl_bt_msg_t *evt);
+
+void handle_gesture();
+
+void gesture_state_machine(sl_bt_msg_t *evt);
 
 
 #endif /* SRC_SCHEDULER_H_ */

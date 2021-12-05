@@ -40,6 +40,8 @@ enum {
   evt_TransferDone,
   evt_ButtonPressed,
   evt_ButtonReleased,
+  evt_GestureInt,
+  evt_GotGesture,
 };
 
 //enum to define scheduler events
@@ -57,6 +59,8 @@ typedef enum uint32_t {
   state2_got_another_char,
   state3_set_indication,
   state4_wait_for_close,
+  state0_gesture_wait,
+  state1_gesture,
   MY_NUM_STATES,
 }my_state;
 
@@ -68,9 +72,6 @@ void schedulerSetEventUF() {
   CORE_ENTER_CRITICAL();
 
   sl_bt_external_signal(evt_TimerUF);
-
-  // set the event in your data structure, this is a read-modify-write
-  //MyEvent |= evt_TimerUF;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -85,8 +86,6 @@ void schedulerSetEventCOMP1() {
   CORE_ENTER_CRITICAL();
 
   sl_bt_external_signal(evt_COMP1);
-  // set the event in your data structure, this is a read-modify-write
-  //MyEvent |= evt_COMP1;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -101,8 +100,6 @@ void schedulerSetEventTransferDone() {
   CORE_ENTER_CRITICAL();
 
   sl_bt_external_signal(evt_TransferDone);
-  // set the event in your data structure, this is a read-modify-write
-  //MyEvent |= evt_TransferDone;
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -117,7 +114,6 @@ void schedulerSetEventButtonPressed() {
   CORE_ENTER_CRITICAL();
 
   sl_bt_external_signal(evt_ButtonPressed);
-  // set the event in your data structure, this is a read-modify-write
 
   // exit critical section
   CORE_EXIT_CRITICAL();
@@ -132,44 +128,142 @@ void schedulerSetEventButtonReleased() {
   CORE_ENTER_CRITICAL();
 
   sl_bt_external_signal(evt_ButtonReleased);
-  // set the event in your data structure, this is a read-modify-write
 
   // exit critical section
   CORE_EXIT_CRITICAL();
 
 } // schedulerSetEventXXX()
 
-// scheduler routine to return 1 event to main()code and clear that event
-uint32_t getNextEvent() {
+// scheduler routine to set a scheduler event
+void schedulerSetGestureEvent() {
 
-  static uint32_t theEvent=evt_NoEvent;
-
-  //determine 1 event to return to main() code, apply priorities etc.
-  // clear the event in your data structure, this is a read-modify-write
   // enter critical section
   CORE_DECLARE_IRQ_STATE;
   CORE_ENTER_CRITICAL();
 
-  if(MyEvent & evt_TimerUF) {
-      theEvent = evt_TimerUF;
-      MyEvent ^= evt_TimerUF;
-  }
-  else if(MyEvent & evt_COMP1) {
-      theEvent = evt_COMP1;
-      MyEvent ^= evt_COMP1;
-  }
-  else if(MyEvent & evt_TransferDone) {
-      theEvent = evt_TransferDone;
-      MyEvent ^= evt_TransferDone;
-  }
+  sl_bt_external_signal(evt_GestureInt);
 
   // exit critical section
   CORE_EXIT_CRITICAL();
 
-  return (theEvent);
-} // getNextEvent()
+} // schedulerSetEventXXX()
+
+// scheduler routine to set a scheduler event
+void schedulerGotGesture() {
+
+  // enter critical section
+  CORE_DECLARE_IRQ_STATE;
+  CORE_ENTER_CRITICAL();
+
+  sl_bt_external_signal(evt_GotGesture);
+
+  // exit critical section
+  CORE_EXIT_CRITICAL();
+
+} // schedulerSetEventXXX()
 
 #if DEVICE_IS_BLE_SERVER
+
+void handle_gesture() {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  if ( isGestureAvailable() ) {
+      switch ( readGesture() ) {
+
+        case DIR_UP:
+          LOG_INFO("DOWN\n\r");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = DOWN");
+          bleData->gesture_value = 4;
+          schedulerGotGesture();
+
+          break;
+
+        case DIR_DOWN:
+          LOG_INFO("UP\n\r");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = UP");
+          bleData->gesture_value = 3;
+          schedulerGotGesture();
+
+          break;
+
+        case DIR_LEFT:
+          LOG_INFO("LEFT\n\r");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = LEFT");
+          bleData->gesture_value = 1;
+          schedulerGotGesture();
+
+          break;
+
+        case DIR_RIGHT:
+          LOG_INFO("RIGHT\n\r");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = RIGHT");
+          bleData->gesture_value = 2;
+          schedulerGotGesture();
+
+          break;
+
+        case DIR_NEAR:
+          LOG_INFO("NEAR\n\r");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = NEAR");
+          bleData->gesture_value = 5;
+          schedulerGotGesture();
+
+          break;
+
+        case DIR_FAR:
+          LOG_INFO("FAR\n\r");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = FAR");
+          bleData->gesture_value = 6;
+          schedulerGotGesture();
+
+          break;
+
+        default:
+          LOG_INFO("NONE");
+          displayPrintf(DISPLAY_ROW_9, "Gesture = NONE");
+      }
+  }
+}
+
+void gesture_state_machine(sl_bt_msg_t *evt) {
+
+  my_state currentState;
+  static my_state nextState = state0_gesture_wait;
+
+  currentState = nextState;     //set current state of the process
+
+  switch(currentState) {
+
+    case state0_gesture_wait:
+
+      nextState = state0_gesture_wait;          //default
+
+      //check for underflow event
+      if(evt->data.evt_system_external_signal.extsignals == evt_GestureInt) {
+
+          //LOG_INFO("GestureInt event\n\r");
+
+          handle_gesture();
+
+          nextState = state1_gesture;
+      }
+
+      break;
+
+    case state1_gesture:
+
+      nextState = state0_gesture_wait;
+
+      break;
+
+    default:
+      LOG_ERROR("Should not be here in gesture state machine\n\r");
+  }
+
+  return;
+
+}
 //for server only
 //state machine to be executed
 void temperature_state_machine(sl_bt_msg_t *evt) {
@@ -275,7 +369,7 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
               NVIC_DisableIRQ(I2C0_IRQn);
 
               //log temperature value
-             // LOG_INFO("Temp = %f C\n\r", convertTemp());
+              // LOG_INFO("Temp = %f C\n\r", convertTemp());
 
               //send temperature indication to client
               ble_SendTemp();

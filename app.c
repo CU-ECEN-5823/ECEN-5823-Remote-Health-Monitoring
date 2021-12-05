@@ -78,8 +78,7 @@ SL_WEAK void app_init(void)
   // This is called once during start-up.
   // Don't call any Bluetooth API functions until after the boot event.
   //initialize GPIO module
-  bool ret;
-  int gesture_value;
+  //bool ret;
 
   gpioInit();
 
@@ -112,7 +111,7 @@ SL_WEAK void app_init(void)
   NVIC_ClearPendingIRQ(GPIO_ODD_IRQn);
   NVIC_EnableIRQ(GPIO_ODD_IRQn);
 
-#if DEVICE_IS_BLE_SERVER
+/*#if DEVICE_IS_BLE_SERVER
 
   ret = SparkFun_APDS9960_init();
   if(ret != true) {
@@ -122,7 +121,7 @@ SL_WEAK void app_init(void)
       LOG_INFO("APDS initialized\n\r");
   }
 
-  ret = enableGestureSensor(false);
+  ret = enableGestureSensor(true);
   if(ret != true) {
       LOG_ERROR("Error enabling gesture\n\r");
   }
@@ -130,15 +129,7 @@ SL_WEAK void app_init(void)
       LOG_INFO("gesture enabled\n\r");
   }
 
-  gesture_value = readGesture();
-  if(gesture_value == -1) {
-      LOG_ERROR("Error reading gesture\n\r");
-  }
-  else {
-      LOG_INFO("Gesture = %d\n\r", gesture_value);
-  }
-
-#endif
+#endif*/
 
 }
 
@@ -196,6 +187,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
   //FOR SERVER
   // sequence through states driven by events
   //temperature_state_machine(evt);    // put this code in scheduler.c/.h
+  gesture_state_machine(evt);
 
 #else
   //FOR CLIENT

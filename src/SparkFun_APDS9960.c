@@ -34,8 +34,6 @@ int gesture_motion;
 
 bool interrupts = true;
 
-
-
 gesture_data_type gestureData;
 
 gesture_data_type * getGestureDataPtr() {

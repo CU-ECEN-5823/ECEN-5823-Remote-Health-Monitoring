@@ -33,6 +33,8 @@
 #define PB0_pin  6
 #define PB1_port gpioPortF
 #define PB1_pin  7
+#define gesture_port gpioPortD
+#define gesture_pin 11
 
 
 

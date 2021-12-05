@@ -102,7 +102,6 @@ void GPIO_EVEN_IRQHandler(void) {
   }
 }
 
-#if !DEVICE_IS_BLE_SERVER
 
 void GPIO_ODD_IRQHandler(void) {
 
@@ -112,6 +111,13 @@ void GPIO_ODD_IRQHandler(void) {
   uint32_t reason = GPIO_IntGet();
 
   GPIO_IntClear(reason);
+
+#if DEVICE_IS_BLE_SERVER
+
+  if(reason == 2048)
+    schedulerSetGestureEvent();
+
+#endif
 
   //get the push button status
   uint8_t button_status = GPIO_PinInGet(PB1_port, PB1_pin);
@@ -130,5 +136,3 @@ void GPIO_ODD_IRQHandler(void) {
       }
   }
 }
-
-#endif

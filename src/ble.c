@@ -26,6 +26,7 @@ enum {
   evt_TransferDone,
   evt_ButtonPressed,
   evt_ButtonReleased,
+  evt_GotGesture,
 };
 
 // BLE private data
@@ -47,7 +48,19 @@ static const uint8_t button_service[16] = { 0x89, 0x62, 0x13, 0x2d, 0x2a, 0x65, 
 // 00000002-38c8-433e-87ec-652a2d136289
 static const uint8_t button_char[16] = { 0x89, 0x62, 0x13, 0x2d, 0x2a, 0x65, 0xec, 0x87, 0x3e, 0x43, 0xc8, 0x38, 0x02, 0x00, 0x00, 0x00 };
 
+//gesture sensor service uuid
+//d38b2e9b-966c-4426-bda0-9c017e23bb35
+static const uint8_t gesture_service[16] = { 0x35, 0xbb, 0x23, 0x7e, 0x01, 0x9c, 0xa0, 0xbd, 0x26, 0x44, 0x6c, 0x96, 0x9b, 0x2e, 0x8b, 0xd3 };
+//gesture sensor characteristic uuid
+//e38b2e9b-966c-4426-bda0-9c017e23bb35
+static const uint8_t gesture_char[16] = { 0x35, 0xbb, 0x23, 0x7e, 0x01, 0x9c, 0xa0, 0xbd, 0x26, 0x44, 0x6c, 0x96, 0x9b, 0x2e, 0x8b, 0xe3 };
 
+//pulse oximeter service uuid
+//ee63a26e-8809-4038-8c7c-341ed4042818
+static const uint8_t oximeter_service[16] = { 0x18, 0x28, 0x04, 0xd4, 0x1e, 0x34, 0x7c, 0x8c, 0x38, 0x40, 0x09, 0x88, 0x6e, 0xa2, 0x63, 0xee};
+//pulse oximeter characteristic uuid
+//fe63a26e-8809-4038-8c7c-341ed4042818
+static const uint8_t oximeter_char[16] = { 0x18, 0x28, 0x04, 0xd4, 0x1e, 0x34, 0x7c, 0x8c, 0x38, 0x40, 0x09, 0x88, 0x6e, 0xa2, 0x63, 0xfe};
 
 #endif
 
@@ -67,95 +80,6 @@ ble_data_struct_t * getBleDataPtr() {
 }
 
 #if DEVICE_IS_BLE_SERVER
-//function to increment read and write pointer in circular buffer
-/*int inc_ptr(int ptr) {
-
-  //reset the pointer value after reaching buffer limit
-  if(ptr+1 >= MAX_PTR) {
-      ptr=0;
-  }
-
-  //increment the pointer by one
-  else {
-      ptr++;
-  }
-
-  return ptr;
-}
-
-//function to store indication data in circular buffer
-//@para: [struct buffer_entry write_data]
-//        structure with all the indication data
-int enqueue(struct buffer_entry write_data) {
-
-  ble_data_struct_t *bleData = getBleDataPtr();
-
-  //check if the buffer is full
-  if(bleData->full) {
-      LOG_ERROR("Buffer is full\n\r");
-      return -1;
-  }
-
-  //store the indication data in the circular buffer at location pointed by wptr(write pointer)
-  bleData->indication_buffer[bleData->wptr] = write_data;
-
-  //increment write pointer
-  bleData->wptr = inc_ptr(bleData->wptr);
-
-  //if wptr and rptr are at same location, buffer is full
-  if(bleData->wptr == bleData->rptr)
-    bleData->full = 1;
-
-  return 0;
-
-}
-
-//function to dequeue indication data from the circular buffer and send  the indication
-int dequeue() {
-
-  ble_data_struct_t *bleData = getBleDataPtr();
-
-  //check if buffer is empty
-  if(bleData->wptr==bleData->rptr && !bleData->full) {
-      LOG_ERROR("Buffer is empty\n\r");
-      return -1;
-  }
-
-  struct buffer_entry read_data;
-
-  //get indication data from the circular buffer
-  read_data = bleData->indication_buffer[bleData->rptr];
-
-  //send the indication to client
-  sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
-                                         read_data.charHandle,
-                                         read_data.bufferLength,
-                                         &(read_data.buffer[0]));
-
-  //check indication return status
-  if(sc != SL_STATUS_OK) {
-      LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-      return -1;
-  }
-  else {
-
-      //if buffer was previously full, reset it since we read an element from there
-      if(bleData->full)
-        bleData->full=false;
-
-      //increment the read pointer
-      bleData->rptr = inc_ptr(bleData->rptr);
-
-      //indication is sent i.e. indication is in flight
-      bleData->indication_inFlight = true;
-      //decrement queued indications
-      bleData->queued_indication--;
-
-      return 0;
-  }
-
-
-}*/
 
 //function to send temperature value indication to client
 void ble_SendTemp() {
@@ -196,20 +120,6 @@ void ble_SendTemp() {
           //check if any indication is inFlight
           if(bleData->indication_inFlight) {
 
-              //save the characteristic values in a buffer_entry
-              /*indication_data.charHandle = gattdb_temperature_measurement;
-              indication_data.bufferLength = 5;
-              for(int i=0; i<5; i++)
-                indication_data.buffer[i] = htm_temperature_buffer[i];
-
-              //store indication data in circular buffer
-              qc = enqueue(indication_data);
-
-              //increase number of queued indications
-              if(qc == 0)
-                bleData->queued_indication++;
-              else
-                LOG_ERROR("Indication enqueue failed\n\r");*/
           }
 
           //send indication of temperature measurement if no indication is inFlight
@@ -265,20 +175,6 @@ void ble_SendButtonState(uint8_t value) {
           //check if any indication is inFlight
           if(bleData->indication_inFlight) {
 
-              //save the characteristic values in a buffer_entry
-              /*indication_data.charHandle = gattdb_button_state;
-              indication_data.bufferLength = 2;
-              for(int i=0; i<2; i++)
-                indication_data.buffer[i] = button_value_buffer[i];
-
-              //store indication data in circular buffer
-              qc = enqueue(indication_data);
-
-              //increase number of queued indications
-              if(qc == 0)
-                bleData->queued_indication++;
-              else
-                LOG_ERROR("Indication enqueue failed\n\r");*/
           }
 
           //send indication of temperature measurement if no indication is inFlight
@@ -339,16 +235,10 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
   ble_data_struct_t *bleData = getBleDataPtr();
 
-  /*uint8_t complete_thermo_service_uuid[2];
-  uint8_t complete_thermo_char_uuid[2];
-  uint8_t complete_button_service_uuid[16];
-  uint8_t complete_button_char_uuid[16];*/
-
   //check ble event
   switch(SL_BT_MSG_ID(evt->header)) {
 
     //for both server and client
-    LOG_INFO("event = %x\n\r", evt->header);
     //system boot event
     //Indicates that the device has started and the radio is ready
     case sl_bt_evt_system_boot_id:
@@ -526,6 +416,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->button_pressed = false;
       bleData->pb1_button_pressed = false;
       bleData->press_seq = 0;
+      bleData->gesture_value = 0;
 
       break;
 
@@ -613,6 +504,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->button_pressed = false;
       bleData->pb1_button_pressed = false;
       bleData->press_seq = 0;
+      bleData->gesture_value = 0;
 
       //delete bonding data from server
       sc = sl_bt_sm_delete_bondings();
@@ -725,10 +617,34 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
 #if DEVICE_IS_BLE_SERVER
 
-          displayPrintf(DISPLAY_ROW_9, "Button Pressed");
+          bool ret;
 
-          if(bleData->bonded)
-            ble_SendButtonState(0x01);
+          //displayPrintf(DISPLAY_ROW_9, "Button Pressed");
+
+          if(bleData->pb1_button_pressed) {
+
+              displayPrintf(DISPLAY_ROW_ACTION, "Enable gesture sensor");
+
+              ret = SparkFun_APDS9960_init();
+              if(ret != true) {
+                  LOG_ERROR("Error initializing APDS\n\r");
+              }
+              else {
+                  LOG_INFO("APDS initialized\n\r");
+              }
+
+              ret = enableGestureSensor(true);
+              if(ret != true) {
+                  LOG_ERROR("Error enabling gesture\n\r");
+              }
+              else {
+                  LOG_INFO("gesture enabled\n\r");
+                  displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
+
+              }
+
+          }
+
 
 
 #endif
@@ -758,13 +674,11 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       }
 
 #if DEVICE_IS_BLE_SERVER
-      //check for button released event
-      if(evt->data.evt_system_external_signal.extsignals == evt_ButtonReleased) {
 
-          displayPrintf(DISPLAY_ROW_9, "Button Released");
+      if(evt->data.evt_system_external_signal.extsignals == evt_GotGesture) {
 
-          if(bleData->bonded)
-            ble_SendButtonState(0x00);
+          //disableGestureSensor();
+          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
       }
 
 #endif
@@ -775,22 +689,6 @@ void handle_ble_event(sl_bt_msg_t *evt) {
     case sl_bt_evt_system_soft_timer_id:
 
       displayUpdate();
-
-#if DEVICE_IS_BLE_SERVER
-      //check for any indications queued or if any indication is inFlight
-      /*if(bleData->queued_indication!=0 && !bleData->indication_inFlight) {
-
-          //read data and send indication
-          qc = dequeue();
-
-          if(qc != 0)
-            LOG_ERROR("Indication dequeue failed\n\r");
-
-      }*/
-
-
-
-#endif
 
       break;
 
@@ -1044,21 +942,5 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
 #endif
 
-    case sl_bt_evt_gatt_server_user_read_request_id:
-
-       LOG_INFO("read char request from client\n\r");
-       displayPrintf(DISPLAY_ROW_9, "Read request");
-
-       sc = sl_bt_gatt_server_send_user_read_response(bleData->connection_handle,
-                                                             bleData->button_char_handle,
-                                                             0,
-                                                             1,
-                                                             (uint8_t *)1,
-                                                             (uint16_t *)1);
-       if(sc != SL_STATUS_OK) {
-                         LOG_ERROR("sl_bt_gatt_server_send_user_read_response() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
-                     }
-
-       break;
   }
 }

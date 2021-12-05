@@ -47,6 +47,9 @@ void gpioInit()
   GPIO_PinModeSet(PB1_port, PB1_pin, gpioModeInputPullFilter, true);
   GPIO_ExtIntConfig(PB1_port, PB1_pin, PB1_pin, true, true, true);
 
+  GPIO_PinModeSet(gesture_port, gesture_pin, gpioModeInputPullFilter, true);
+  GPIO_ExtIntConfig(gesture_port, gesture_pin, gesture_pin, false, true, true);
+
 } // gpioInit()
 
 

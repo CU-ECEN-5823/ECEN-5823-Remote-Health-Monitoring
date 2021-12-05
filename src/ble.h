@@ -99,6 +99,8 @@ typedef struct {
   //boolean to track GATT command
   bool gatt_procedure;
 
+  uint8_t gesture_value;
+
 
 } ble_data_struct_t;
 
