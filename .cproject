@@ -515,20 +515,10 @@
     	
     <storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
     	
-    <storageModule moduleId="scannerConfiguration">
-        		
-        <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-        		
-        <scannerConfigBuildInfo instanceId="com.silabs.ss.framework.project.toolchain.core.default#com.silabs.ss.tool.ide.arm.toolchain.gnu.cdt:10.2.1.20201103;com.silabs.ss.framework.project.toolchain.core.default#com.silabs.ss.tool.ide.arm.toolchain.gnu.cdt:10.2.1.20201103.;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.base.1856126383;com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.input.1245787977">
-            			
-            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-            		
-        </scannerConfigBuildInfo>
-        	
-    </storageModule>
-    	
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
     	
     <storageModule moduleId="refreshScope"/>
+    	
+    <storageModule moduleId="scannerConfiguration"/>
     
 </cproject>
