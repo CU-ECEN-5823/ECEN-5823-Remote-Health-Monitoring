@@ -9,7 +9,11 @@
     <!--Device Name-->
     <characteristic const="false" id="device_name" name="Device Name" sourceId="org.bluetooth.characteristic.gap.device_name" uuid="2A00">
       <informativeText/>
+<<<<<<< HEAD
       <value length="6" type="utf-8" variable_length="false">Saloni</value>
+=======
+      <value length="14" type="utf-8" variable_length="false">Michelle</value>
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
       <properties>
         <read authenticated="false" bonded="false" encrypted="false"/>
         <write authenticated="false" bonded="false" encrypted="false"/>
@@ -77,8 +81,12 @@
       <informativeText>Abstract:  The Temperature Type characteristic is an enumeration that indicates where the temperature was measured.  Summary:  These Temperature Type values correspond to the Temperature Type descriptions used in ISO/IEEE 11073-10408-2008.  </informativeText>
       <value length="1" type="hex" variable_length="false"/>
       <properties>
+<<<<<<< HEAD
         <read authenticated="false" bonded="false" encrypted="false"/>
         <write authenticated="false" bonded="false" encrypted="false"/>
+=======
+        <indicate authenticated="false" bonded="false" encrypted="false"/>
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
       </properties>
     </characteristic>
     
@@ -87,8 +95,12 @@
       <informativeText>Abstract:  The Intermediate Temperature characteristic has the same format as the Temperature Measurement characteristic. However, due to a different context, the Value field is referred to as the Intermediate Temperature Value field.  </informativeText>
       <value length="17" type="hex" variable_length="false"/>
       <properties>
+<<<<<<< HEAD
         <read authenticated="false" bonded="false" encrypted="false"/>
         <write authenticated="false" bonded="false" encrypted="false"/>
+=======
+        <indicate authenticated="false" bonded="false" encrypted="false"/>
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
       </properties>
       
       <!--Client Characteristic Configuration-->
@@ -107,8 +119,12 @@
       <informativeText>Abstract:  The Measurement Interval characteristic defines the time between measurements.  Summary:  This characteristic is capable of representing values from 1 second to 65535 seconds which is equal to 18 hours, 12 minutes and 15 seconds.  </informativeText>
       <value length="2" type="hex" variable_length="false"/>
       <properties>
+<<<<<<< HEAD
         <read authenticated="false" bonded="false" encrypted="false"/>
         <write authenticated="false" bonded="false" encrypted="false"/>
+=======
+        <indicate authenticated="false" bonded="false" encrypted="false"/>
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
       </properties>
       
       <!--Client Characteristic Configuration-->
@@ -132,6 +148,7 @@
       </descriptor>
     </characteristic>
   </service>
+<<<<<<< HEAD
   
   <!--ECEN5823 Encryption Test-->
   <service advertise="true" name="ECEN5823 Encryption Test" requirement="mandatory" sourceId="" type="primary" uuid="00000001-38c8-433e-87ec-652a2d136289">
@@ -207,4 +224,6 @@
       </descriptor>
     </characteristic>
   </service>
+=======
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 </gatt>

@@ -15,11 +15,13 @@
 
 
 #include <stdbool.h>
+#include "irq.h"
 
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
 #include "log.h"
 
+//#define MY_USE_SYSTICKS
 
 
 /**
@@ -28,6 +30,7 @@
  */
 uint32_t loggerGetTimestamp()
 {
+<<<<<<< HEAD
 #ifdef MY_USE_SYSTICKS
 
   // Students: Look in the CMSIS library for systick routines. For debugging
@@ -48,9 +51,30 @@ uint32_t loggerGetTimestamp()
   //return (0);
 
 #endif
+=======
+    #ifdef MY_USE_SYSTICKS
+    
+       // Students: Look in the CMSIS library for systick routines. For debugging
+       //           purposes this can provide greater resolution than a timestamp based on
+       //           LETIMER0. Do not turn in any code that executes systick routines
+       //           as this may effect your energy measurements and your grade.
+       
+       // Develop this function if you so desire for debugging purposes only
+     return getSysTicks();
+
+    #else
+    
+       // Students: You will eventually develop this function letimerMilliseconds()
+       //           and not return 0. This will be the function to call for your graded
+       //           assignments. Put this function in your irq.c/.h files.
+       
+       return letimerMilliseconds();
+     //return (0);
+
+    #endif
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 } // loggerGetTimestamp
-
 
 
 /**
@@ -92,13 +116,13 @@ void printSLErrorString(sl_status_t status) {
 
 //void logInit(void)
 //{
-//	RETARGET_SerialInit();
-//	/**
-//	 * See https://siliconlabs.github.io/Gecko_SDK_Doc/efm32g/html/group__RetargetIo.html#ga9e36c68713259dd181ef349430ba0096
-//	 * RETARGET_SerialCrLf() ensures each linefeed also includes carriage return.  Without it, the first character is shifted in TeraTerm
-//	 */
-//	RETARGET_SerialCrLf(true);
-//	LOG_INFO("Initialized Logging");
+//  RETARGET_SerialInit();
+//  /**
+//   * See https://siliconlabs.github.io/Gecko_SDK_Doc/efm32g/html/group__RetargetIo.html#ga9e36c68713259dd181ef349430ba0096
+//   * RETARGET_SerialCrLf() ensures each linefeed also includes carriage return.  Without it, the first character is shifted in TeraTerm
+//   */
+//  RETARGET_SerialCrLf(true);
+//  LOG_INFO("Initialized Logging");
 //}
 
 ///**
@@ -106,7 +130,7 @@ void printSLErrorString(sl_status_t status) {
 // */
 //void logFlush(void)
 //{
-//	RETARGET_SerialFlush();
+//  RETARGET_SerialFlush();
 //}
 
 

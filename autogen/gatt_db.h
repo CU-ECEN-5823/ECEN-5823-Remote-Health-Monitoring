@@ -17,6 +17,7 @@ extern const sli_bt_gattdb_t gattdb;
 #define gattdb_system_id                      18
 #define gattdb_temperature_measurement        21
 #define gattdb_temperature_type               24
+<<<<<<< HEAD
 #define gattdb_intermediate_temperature       26
 #define gattdb_measurement_interval           29
 #define gattdb_valid_range                    31
@@ -24,6 +25,12 @@ extern const sli_bt_gattdb_t gattdb;
 #define gattdb_gesture_state                  38
 #define gattdb_oximeter_state                 42
 #define gattdb_ota_control                    46
+=======
+#define gattdb_intermediate_temperature       27
+#define gattdb_measurement_interval           30
+#define gattdb_valid_range                    32
+#define gattdb_ota_control                    35
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 
 #endif // __GATT_DB_H

@@ -23,8 +23,15 @@
 // For your Bluetooth Client implementations.
 // Set this #define to the bd_addr of the Gecko that will be your Server.
 //                   bd_addr  [0]   [1]   [2]   [3]   [4]   [5] <- array indices
+<<<<<<< HEAD
 //#define SERVER_BT_ADDRESS (uint8_t[]){ 0x2A, 0x2C, 0x61, 0xCC, 0xCC, 0xCC }
 #define SERVER_BT_ADDRESS (uint8_t[]){ 0x59, 0x24, 0x28, 0xCC, 0xCC, 0xCC }
+=======
+#define SERVER_BT_ADDRESS (bd_addr) {\
+                .addr = { 0x59, 0x24, 0x28, 0xCC, 0xCC, 0xCC }\
+                 }
+
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 #if DEVICE_IS_BLE_SERVER
 
@@ -43,5 +50,7 @@ static inline bool IsClientDevice() { return true;}
 static inline bool IsServerDevice() { return false; }
 
 #endif
+
+
 
 #endif /* SRC_BLE_DEVICE_TYPE_H_ */

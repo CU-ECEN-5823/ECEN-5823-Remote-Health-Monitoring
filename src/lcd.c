@@ -1,28 +1,28 @@
 /***********************************************************************
- * @file      lcd.c
- * @version   1.0
- * @brief     LCD implementation file. A complete re-write of the LCD support code
+ * @file      lcd.c
+ * @version   1.0
+ * @brief     LCD implementation file. A complete re-write of the LCD support code
  *            based on Gecko SDK 3.1 and Simplicity Studio 5.1.
  *            Required components are:
  *               Memory LCD with USART SPI drive
  *               Monochrome Sharp memory LCD
  *               GLIB Graphics Library (glib.c)
  *               GLIB driver for Sharp Memory LCD (dmd_memlcd.c, dmd.h)
- *
- * @author    Dave Sluiter, David.Sluiter@colorado.edu
- * @date      March 15, 2021
- *
- * @institution University of Colorado Boulder (UCB)
- * @course      ECEN 5823: IoT Embedded Firmware
- * @instructor  David Sluiter
- *
- * @assignment Starter code
- * @due        NA
- *
- * @resources  This code is based on the Silicon Labs example MEMLCD_baremetal
+ *
+ * @author    Dave Sluiter, David.Sluiter@colorado.edu
+ * @date      March 15, 2021
+ *
+ * @institution University of Colorado Boulder (UCB)
+ * @course      ECEN 5823: IoT Embedded Firmware
+ * @instructor  David Sluiter
+ *
+ * @assignment Starter code
+ * @due        NA
+ *
+ * @resources  This code is based on the Silicon Labs example MEMLCD_baremetal
  *             as part of SSv5 and Gecko SDK 3.1.
- *
- * @copyright  All rights reserved. Distribution allowed only for the
+ *
+ * @copyright  All rights reserved. Distribution allowed only for the
  * use of assignment grading. Use of code excerpts allowed at the
  * discretion of author. Contact for permission.
  *
@@ -45,11 +45,15 @@
  *    write the display. This needs to be called after event sl_bt_evt_system_boot_id because we
  *    set up a BT Stack soft timer and we aren't supposed to call any BT API calls prior to the
  *    boot event.
- */
+ */
 
 #include "stdarg.h" // for arguments
 
 #include "lcd.h"
+
+#include "ble_device_type.h"
+
+#include "ble.h"
 
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
@@ -128,6 +132,7 @@ void displayPrintf(enum display_row row, const char *format, ...)
   char                   strToDisplay[DISPLAY_ROW_LEN+1]; // +1 for null terminator
   char                   strToErase[DISPLAY_ROW_LEN+1];   // +1 for null terminator
 
+<<<<<<< HEAD
   // Range check the row number
   if (row >= DISPLAY_NUMBER_OF_ROWS) {
       LOG_ERROR("row parameter %d is greater than max row index %d", (int) row, (int) DISPLAY_NUMBER_OF_ROWS-1);
@@ -139,6 +144,19 @@ void displayPrintf(enum display_row row, const char *format, ...)
   //    LOG_ERROR("row parameter %d is negative", (int) row);
   //    return;
   //}
+=======
+   // Range check the row number
+   if (row >= DISPLAY_NUMBER_OF_ROWS) {
+       LOG_ERROR("row parameter %d is greater than max row index %d", (int) row, (int) DISPLAY_NUMBER_OF_ROWS-1);
+       return;
+   }
+   // Note: enum types are unsigned, so negative row values passed in become large
+   //       positive values trapped by the the range check above.
+//   if (row < 0) {
+//       LOG_ERROR("row parameter %d is negative", (int) row);
+//       return;
+//   }
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
   // Convert the variable length / formatted input to a string
   // IMPORTANT: Don't use sprintf() as that can write beyond the end of the buffer
@@ -231,6 +249,7 @@ void displayInit()
   display->last_extcomin_state_high = false;
 
 
+<<<<<<< HEAD
   // Edit #1
   // Students: If you created a function for A3, A4 and A5 that turns power on and
   //           off to the Si7021, call the "On" function here. If not create the function
@@ -251,6 +270,19 @@ void displayInit()
   if (status != DMD_OK) {
       LOG_ERROR("DMD_init() returned non-zero error code=0x%04x", (unsigned int) status);
   }
+=======
+    // Edit #1
+    // Students: If you created a function for A3, A4 and A5 that turns power on and
+    //           off to the Si7021, call the "On" function here. If not create the function
+    //           gpioSensorEnSetOn() to set SENSOR_ENABLE=1, see main board schematic,
+    //           SENSOR_ENABLE=1 is tied to DISP_ENABLE. We need this on all the
+    //           the time now for the LCD to function properly.
+    //           Create that function to gpio.c/.h Then add that function call here.
+    //
+    gpio_I2C(1);
+    // we need SENSOR_ENABLE=1 which is tied to DISP_ENABLE
+    //                     // for the LCD, on all the time now
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 
   // Initialize the glib context
@@ -297,6 +329,7 @@ void displayInit()
   // Students: Figure out what parameters to pass in to sl_bt_system_set_soft_timer() to
   //           set up a 1 second repeating soft timer and uncomment the following lines
 
+<<<<<<< HEAD
   sl_status_t          timer_response;
   timer_response = sl_bt_system_set_soft_timer(32768, 2, 0);
   if (timer_response != SL_STATUS_OK) {
@@ -304,6 +337,28 @@ void displayInit()
   }
 
 
+=======
+    // The BT stack implements timers that we can setup and then have the stack pass back
+    // events when the timer expires.
+    // This assignment has us using the Sharp LCD which needs to be serviced approx
+    // every 1 second, in order to toggle the input "EXTCOMIN" input to the LCD display.
+    // The documentation is a bit sketchy, but apparently charge can build up within
+    // the LCD and it needs to be bled off. So toggling the EXTCOMIN input is the method by
+    // which this takes place.
+    // We will get a sl_bt_evt_system_soft_timer_id event as a result of calling
+    // sl_bt_system_set_soft_timer() i.e. starting the timer.
+
+    // Edit #3
+    // Students: Figure out what parameters to pass in to sl_bt_system_set_soft_timer() to
+    //           set up a 1 second repeating soft timer and uncomment the following lines
+
+    sl_status_t          timer_response;
+    ble_data_struct_t *bleDataPtr = getBleDataPtr();
+    timer_response = sl_bt_system_set_soft_timer(32768, bleDataPtr->soft_timer_handle, 0);
+    if (timer_response != SL_STATUS_OK) {
+        LOG_ERROR("Timer error!!");
+     }
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 } // displayInit()
 
@@ -330,7 +385,4 @@ void displayUpdate()
   gpioSetDisplayExtcomin(display->last_extcomin_state_high);
 
 } // displayUpdate()
-
-
-
 

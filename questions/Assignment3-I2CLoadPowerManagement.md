@@ -6,6 +6,7 @@ See [Mastering Markdown](https://guides.github.com/features/mastering-markdown/)
 *Please include screenshots of the profiler window detailing each current measurement captured.  See the file Instructions to add screenshots in assignment.docx in the ECEN 5823 Student Public Folder.* 
 
 1. What is the average current per period?
+<<<<<<< HEAD
    Answer: 181.4 uA 
    <br>Screenshot:  <img width="554" alt="avg_current_per_period" src="https://user-images.githubusercontent.com/77704335/133868562-d7263152-870c-4bde-8dc5-39e1f1559ba6.png">
 
@@ -30,3 +31,23 @@ See [Mastering Markdown](https://guides.github.com/features/mastering-markdown/)
 
    <br>Screenshot:  <img width="560" alt="time_lpmon" src="https://user-images.githubusercontent.com/77704335/133868515-af8902d2-3db6-485c-8423-78e6b5c90b56.png">  
    ![Time_lpmON](link-to-screenshot-image)
+=======
+   Answer: 145.41 uA
+   <br>Screenshot:  
+   ![Avg_current_per_period](https://github.com/CU-ECEN-5823/ecen5823-assignment3-Mich2899/blob/master/questions/screenshots/Avg_current_per_period.PNG)  
+   
+2. What is the average current when the Si7021 is Powered Off?  
+   Answer: 2.19 uA
+   <br>Screenshot:  
+   ![Avg_current_lpmOFF](https://github.com/CU-ECEN-5823/ecen5823-assignment3-Mich2899/blob/master/questions/screenshots/Avg_current_lpmOFF.PNG)
+   
+3. What is the average current when the Si7021 is Powered On?  
+   Answer: 4.37 mA
+   <br>Screenshot:  
+   ![Avg_current_lpmON](https://github.com/CU-ECEN-5823/ecen5823-assignment3-Mich2899/blob/master/questions/screenshots/Avg_current_lpmON.PNG)
+   
+4. How long is the Si7021 Powered On for 1 temperature reading?  
+   Answer: 91.20 ms
+   <br>Screenshot:  
+   ![Time_lpmON](https://github.com/CU-ECEN-5823/ecen5823-assignment3-Mich2899/blob/master/questions/screenshots/Time_lpmON.PNG)
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e

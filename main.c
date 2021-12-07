@@ -38,9 +38,17 @@
  *                  GNU ARM 10.2.1
  *
  ******************************************************************************/
+<<<<<<< HEAD
 
 #include "main.h"
 
+=======
+ 
+ #include "main.h"
+ #include "src/timers.h"
+ #include "src/oscillators.h"
+ 
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
 #include "src/log.h"
@@ -69,9 +77,17 @@ int main(void)
   sl_system_kernel_start();
 
 #else // SL_CATALOG_KERNEL_PRESENT
-
   // The so-called super-loop, sometimes called: "the main while(1) loop"
   while (1) {
+<<<<<<< HEAD
+=======
+    // Do not remove this call: Silicon Labs components process action routine
+    // must be called from the super loop.
+    // Students: This call will eventually call the function sl_bt_on_event()
+    // defined in app.c which we will discuss in lecture and learn more about
+    // in later programming assignments. Do not remove this call.
+    sl_system_process_action();
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
       // Do not remove this call: Silicon Labs components process action routine
       // must be called from the super loop.

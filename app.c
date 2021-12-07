@@ -37,6 +37,10 @@
 
 
 #include "app.h"
+#include "src/scheduler.h"
+#include "src/ble.h"
+#include "src/ble_device_type.h"
+
 
 // Include logging for this file
 #define INCLUDE_LOG_DEBUG 1
@@ -77,6 +81,7 @@ SL_WEAK void app_init(void)
   // Put your application 1-time init code here
   // This is called once during start-up.
   // Don't call any Bluetooth API functions until after the boot event.
+<<<<<<< HEAD
   //initialize GPIO module
   //bool ret;
 
@@ -89,6 +94,27 @@ SL_WEAK void app_init(void)
   mytimer_init();
 
   i2c_init();
+=======
+  // Student Edit: Add a call to gpioInit() here
+
+//NOTE:This section of code is from previous assigment
+
+/*
+#if(LOWEST_ENERGY_MODE ==1 )
+      sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
+#elif(LOWEST_ENERGY_MODE ==2 )
+      sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM2);
+#endif
+*/
+
+  gpioInit();
+  init_oscillators();                                 //Initialize oscillators
+  initLETIMER0();                                     //initialize LETIMER0
+
+  LETIMER_Enable(LETIMER0,true);                      //Enable LETIMER0
+  NVIC_ClearPendingIRQ (LETIMER0_IRQn);               //Clear all the pending IRQ for LETIMER0
+  NVIC_EnableIRQ (LETIMER0_IRQn);                      //Enable timer
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 #if (LOWEST_ENERGY_MODE > 2)
   //LOG_INFO("Lowest Energy mode possible is EM2, changing to EM2");
@@ -103,6 +129,7 @@ SL_WEAK void app_init(void)
     sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM1);
 #endif
 
+<<<<<<< HEAD
   //enable interrupt for LETIMER0 in NVIC
   NVIC_ClearPendingIRQ(LETIMER0_IRQn);
   NVIC_EnableIRQ(LETIMER0_IRQn);
@@ -110,6 +137,17 @@ SL_WEAK void app_init(void)
   NVIC_EnableIRQ(GPIO_EVEN_IRQn);
   NVIC_ClearPendingIRQ(GPIO_ODD_IRQn);
   NVIC_EnableIRQ(GPIO_ODD_IRQn);
+=======
+/*****************************************************************************
+ * delayApprox(), private to this file.
+ * A value of 3500000 is ~ 1 second. After assignment 1 you can delete or
+ * comment out this function. Wait loops are a bad idea in general.
+ * We'll discuss how to do this a better way in the next assignment.
+ *****************************************************************************/
+/*static void delayApprox(int delay)
+{
+  volatile int i;
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 /*#if DEVICE_IS_BLE_SERVER
 
@@ -133,7 +171,7 @@ SL_WEAK void app_init(void)
 
 }
 
-
+*/
 
 
 /**************************************************************************//**
@@ -147,6 +185,7 @@ SL_WEAK void app_process_action(void)
   //         We will create/use a scheme that is far more energy efficient in
   //         later assignments.
 
+<<<<<<< HEAD
   //uint32_t evt;
 
   //evt = getNextEvent();         //get event to be executed from scheduler
@@ -157,6 +196,13 @@ SL_WEAK void app_process_action(void)
   timerWaitUs(500000);
   gpioLed0SetOff();
   timerWaitUs(500000);*/
+=======
+//  uint32_t evt;                                   //variable to determine event
+//    evt = getNextEvent();
+//
+//  temperature_state_machine(evt);
+
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 }
 
@@ -175,18 +221,31 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
   // Just a trick to hide a compiler warning about unused input parameter evt.
   // We will add real functionality here later.
+<<<<<<< HEAD
   /*if (evt->header) {
+=======
+  /***********************************************************************************************************************************************************/
+  if (evt->header) {
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
       printf(".\n");
   }*/
 
   // Some events require responses from our application code,
   // and don’t necessarily advance our state machines.
   // For assignment 5 uncomment the next 2 function calls
+<<<<<<< HEAD
   handle_ble_event(evt); // put this code in ble.c/.h
+=======
+   handle_ble_event(evt); // put this code in ble.c/.h
+
+#if DEVICE_IS_BLE_SERVER
+   //SERVER
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 #if DEVICE_IS_BLE_SERVER
   //FOR SERVER
   // sequence through states driven by events
+<<<<<<< HEAD
   //temperature_state_machine(evt);    // put this code in scheduler.c/.h
 
   //LOG_INFO("gesture on:%d\n\r",bleData->gesture_on);
@@ -228,5 +287,17 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
 #endif
 
-} // sl_bt_on_event()
+=======
+   temperature_state_machine(evt);    // put this code in scheduler.c/.h
+  
+#else
+   //CLIENT
 
+   // sequence through service and characteristic discovery
+   discovery_state_machine(evt); // put this code in src/scheduler.c/.h
+
+#endif
+  
+   
+>>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
+} // sl_bt_on_event()
