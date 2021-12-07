@@ -42,5 +42,6 @@ void handle_gesture();
 
 void gesture_state_machine(sl_bt_msg_t *evt);
 
+void oximeter_state_machine(sl_bt_msg_t *evt);
 
 #endif /* SRC_SCHEDULER_H_ */

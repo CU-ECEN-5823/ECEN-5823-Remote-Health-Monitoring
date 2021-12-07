@@ -100,6 +100,7 @@ void GPIO_EVEN_IRQHandler(void) {
           schedulerSetEventButtonReleased();
       }
   }
+
 }
 
 

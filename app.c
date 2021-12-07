@@ -171,6 +171,7 @@ SL_WEAK void app_process_action(void)
  *****************************************************************************/
 void sl_bt_on_event(sl_bt_msg_t *evt)
 {
+  ble_data_struct_t *bleData = getBleDataPtr();
 
   // Just a trick to hide a compiler warning about unused input parameter evt.
   // We will add real functionality here later.
@@ -187,7 +188,39 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
   //FOR SERVER
   // sequence through states driven by events
   //temperature_state_machine(evt);    // put this code in scheduler.c/.h
-  gesture_state_machine(evt);
+
+  //LOG_INFO("gesture on:%d\n\r",bleData->gesture_on);
+      //if(bleData->gesture_on == true){
+         // LOG_INFO("Gesture sensor is on\n\r");
+          gesture_state_machine(evt);
+      //}
+
+      if((bleData->gesture_value == 0x01) || (bleData->gesture_value == 0x02)){
+          //LOG_INFO("Left\n\r");
+          //disableGestureSensor();
+          //          bleData->gesture_on = false;
+          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
+          //bleData->oximeter_off = false;
+          oximeter_state_machine(evt);
+      }
+
+      /*if(bleData->gesture_value == 0x02){
+          //LOG_INFO("Right\n\r");
+          bleData->oximeter_off = false;
+          //disableGestureSensor();
+          //bleData->gesture_on = false;
+          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
+          oximeter_state_machine(evt);
+      }*/
+
+      if(bleData->gesture_value==0x03){
+          //LOG_INFO("Down\n\r");
+          //bleData->oximeter_off = false;
+          //disableGestureSensor();
+          //bleData->gesture_on = false;
+          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
+          temperature_state_machine(evt);
+      }
 
 #else
   //FOR CLIENT
@@ -196,4 +229,3 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 #endif
 
 } // sl_bt_on_event()
-
