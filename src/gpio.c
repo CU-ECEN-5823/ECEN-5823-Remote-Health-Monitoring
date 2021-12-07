@@ -17,26 +17,21 @@
 #include "app.h"
 #include "main.h"
 
+
+
+
+
 // Set GPIO drive strengths and modes of operation
-//NOTE: gpioInit has been removed from the app_init function anyways.
 void gpioInit()
 {
 
   // Student Edit:
 
-<<<<<<< HEAD
   //GPIO_DriveStrengthSet(LED0_port, gpioDriveStrengthStrongAlternateStrong);
   GPIO_DriveStrengthSet(LED0_port, gpioDriveStrengthWeakAlternateWeak);
   GPIO_PinModeSet(LED0_port, LED0_pin, gpioModePushPull, false);
 
   //GPIO_DriveStrengthSet(LED1_port, gpioDriveStrengthStrongAlternateStrong);
-=======
-  GPIO_DriveStrengthSet(LED0_port, gpioDriveStrengthStrongAlternateStrong);
-  GPIO_DriveStrengthSet(LED0_port, gpioDriveStrengthWeakAlternateWeak);
-  GPIO_PinModeSet(LED0_port, LED0_pin, gpioModePushPull, false);
-
-  GPIO_DriveStrengthSet(LED1_port, gpioDriveStrengthStrongAlternateStrong);
->>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
   GPIO_DriveStrengthSet(LED1_port, gpioDriveStrengthWeakAlternateWeak);
   GPIO_PinModeSet(LED1_port, LED1_pin, gpioModePushPull, false);
 
@@ -81,7 +76,6 @@ void gpioLed1SetOff()
   GPIO_PinOutClear(LED1_port,LED1_pin);
 }
 
-<<<<<<< HEAD
 void enable_sensor() {
   GPIO_PinOutSet(sensor_port, sensor_pin);
 }
@@ -98,42 +92,8 @@ void gpioSetDisplayExtcomin(bool value) {
   else {
       GPIO_PinOutClear(lcd_port, lcd_pin);
   }
-=======
-void gpioToggleLED0()
-{
-  static  bool on=false;
-  if (on == false) {
-    on = true;
-    GPIO_PinOutSet(LED0_port,LED0_pin);
-  } else {
-    on = false;
-    GPIO_PinOutClear(LED0_port,LED0_pin);
-  }
-} // gpioToggleLED0(0
-
-
-//void gpioSensorEnSetOn()
-//{
-//  GPIO_PinModeSet(SENSOR_PORT, SENSOR_ENABLE, gpioModePushPull, on_off);
-//}
-
-//Enables/Disables I2C sensor
-void gpio_I2C(int on_off){
-  GPIO_PinModeSet(SENSOR_PORT, SENSOR_ENABLE, gpioModePushPull, on_off);
-
-}
-
-//toggle the EXTCOMIN pin for operation of LCD
-void gpioSetDisplayExtcomin(bool value)
-{
-  GPIO_PinModeSet(DISP_PORT, DISP_EXTCOMIN, gpioModePushPull, value);
->>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 }
 
 
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e

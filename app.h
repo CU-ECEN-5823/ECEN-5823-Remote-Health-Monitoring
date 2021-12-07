@@ -58,17 +58,10 @@
 #include "src/timers.h"
 #include "src/irq.h"
 #include "src/lcd.h"
-<<<<<<< HEAD
 #include "src/scheduler.h"
 #include "src/i2c.h"
 #include "src/ble.h"
 #include "src/SparkFun_APDS9960.h"
-=======
-#include "src/timers.h"
-#include "src/oscillators.h"
-#include "src/scheduler.h"
-#include "src/i2c.h"
->>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 
 // #defines to select energy mode
 //#define LOWEST_ENERGY_MODE 0
@@ -79,8 +72,6 @@
 //set timer period
 #define LETIMER_PERIOD_MS  3000
 
-#define LOWEST_ENERGY_MODE 2              //This macro decides the energy mode
-#define LETIMER_PERIOD_MS 3000            //This macro defines the period of one complete on-off cycle of LED
 
 // See: https://docs.silabs.com/gecko-platform/latest/service/power_manager/overview
 #if defined(SL_CATALOG_POWER_MANAGER_PRESENT)
@@ -94,7 +85,6 @@
 //   up the MCU from the call to sl_power_manager_sleep() in the main while (1)
 //   loop.
 // Students: We'll need to modify this for A2 onward.
-<<<<<<< HEAD
 #if LOWEST_ENERGY_MODE == 0
 
 #define APP_IS_OK_TO_SLEEP      (false)
@@ -105,13 +95,6 @@
 
 #endif
 
-=======
-#if (LOWEST_ENERGY_MODE == 0)
-#define APP_IS_OK_TO_SLEEP      (false)
-#else
-#define APP_IS_OK_TO_SLEEP      (true)
-#endif
->>>>>>> 88f2a69d6c34b4934217767d18295fca71d5373e
 // Return values for app_sleep_on_isr_exit():
 //   SL_POWER_MANAGER_IGNORE; // The module did not trigger an ISR and it doesn't want to contribute to the decision
 //   SL_POWER_MANAGER_SLEEP;  // The module was the one that caused the system wakeup and the system SHOULD go back to sleep

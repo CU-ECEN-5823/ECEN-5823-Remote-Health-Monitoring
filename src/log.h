@@ -24,17 +24,17 @@
 
 #ifndef LOG_ERROR
 #define LOG_ERROR(message,...) \
-  LOG_DO(message,"Error", ##__VA_ARGS__)
+	LOG_DO(message,"Error", ##__VA_ARGS__)
 #endif
 
 #ifndef LOG_WARN
 #define LOG_WARN(message,...) \
-  LOG_DO(message,"Warn ", ##__VA_ARGS__)
+	LOG_DO(message,"Warn ", ##__VA_ARGS__)
 #endif
 
 #ifndef LOG_INFO
 #define LOG_INFO(message,...) \
-  LOG_DO(message,"Info ", ##__VA_ARGS__)
+	LOG_DO(message,"Info ", ##__VA_ARGS__)
 #endif
 
 
