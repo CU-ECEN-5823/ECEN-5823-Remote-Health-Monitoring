@@ -198,7 +198,7 @@ void ble_SendButtonState(uint8_t value) {
 
 }
 
-//function to send button state indication
+//function to send gesture indication
 void ble_SendGestureState(uint8_t value) {
 
   ble_data_struct_t *bleData = getBleDataPtr();
@@ -231,12 +231,61 @@ void ble_SendGestureState(uint8_t value) {
               //LOG_INFO("Cannot send gesture reading, indication inflight\n\r");
           }
 
-          //send indication of temperature measurement if no indication is inFlight
+          //send indication of gesture measurement if no indication is inFlight
           else {
               sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
                                                      gattdb_gesture_state,
                                                      2,
                                                      &gesture_value_buffer[0]);
+              if(sc != SL_STATUS_OK) {
+                  LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+              }
+
+              else {
+
+                  //indication is sent i.e. indication is in flight
+                  bleData->indication_inFlight = true;
+                  //LOG_INFO("Sent gesture indication, value=%d\n\r", value);
+              }
+          }
+      }
+  }
+
+}
+
+//function to send oximeter and heart rate indication
+void ble_SendOximeterState(uint8_t* pulse_data) {
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+
+  //check if Bluetooth is connected
+  if(bleData->connected == true){
+
+      LOG_INFO("Does it send indication?\n\r");
+      //write button state in gatt database
+      sl_status_t sc = sl_bt_gatt_server_write_attribute_value(gattdb_oximeter_state,
+                                                               0,
+                                                               2,
+                                                               &pulse_data[0]);
+
+      if(sc != SL_STATUS_OK) {
+          LOG_ERROR("sl_bt_gatt_server_write_attribute_value() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
+      }
+
+      //check if indication is on and server and client are bonded
+      if (bleData->oximeter_indication && bleData->bonded) {
+
+          //check if any indication is inFlight
+          if(bleData->indication_inFlight) {
+              //LOG_INFO("Cannot send oximeter reading, indication inflight\n\r");
+          }
+
+          //send indication of oximeter measurement if no indication is inFlight
+          else {
+              sc = sl_bt_gatt_server_send_indication(bleData->connection_handle,
+                                                     gattdb_oximeter_state,
+                                                     2,
+                                                     &pulse_data[0]);
               if(sc != SL_STATUS_OK) {
                   LOG_ERROR("sl_bt_gatt_server_send_indication() returned != 0 status=0x%04x\n\r", (unsigned int)sc);
               }
@@ -467,6 +516,9 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->indication_inFlight = false;
       bleData->button_pressed = false;
       bleData->pb1_button_pressed = false;
+      bleData->gesture_value = 0x00;
+      bleData->gesture_on = false;
+      bleData->oximeter_off = true;
 
       break;
 
@@ -536,6 +588,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       gpioLed0SetOff();
       gpioLed1SetOff();
 
+      displayPrintf(DISPLAY_ROW_8,"");
       displayPrintf(DISPLAY_ROW_9, "");
       displayPrintf(DISPLAY_ROW_TEMPVALUE, "");
       displayPrintf(DISPLAY_ROW_PASSKEY, "");
@@ -551,6 +604,9 @@ void handle_ble_event(sl_bt_msg_t *evt) {
       bleData->indication_inFlight = false;
       bleData->button_pressed = false;
       bleData->pb1_button_pressed = false;
+      bleData->gesture_value = 0x00;
+      bleData->gesture_on = false;
+      bleData->oximeter_off = true;
 
       //delete bonding data from server
       sc = sl_bt_sm_delete_bondings();
@@ -686,6 +742,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
               else {
                   //LOG_INFO("gesture enabled\n\r");
                   displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
+                  bleData->gesture_on = true;
 
               }
 
@@ -708,6 +765,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
           if(bleData->button_pressed && bleData->bonded == false) {
 
+              //LOG_INFO("sends passkey confirm?\n\r");
               //Accept or reject the reported passkey confirm value.
               sc = sl_bt_sm_passkey_confirm(bleData->connection_handle, 1);
 
@@ -759,8 +817,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
               //check if indication flag is disabled
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
-                  bleData->gesture_indication = false;
-                  gpioLed0SetOff();
+                  //bleData->gesture_indication = false;
+                  //gpioLed0SetOff();
                   displayPrintf(DISPLAY_ROW_9, "");
                   //LOG_INFO("gesture indication off\n\r");
 
@@ -768,8 +826,8 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
               //check if indication flag is enabled
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
-                  bleData->gesture_indication = true;
-                  gpioLed0SetOn();
+                  //bleData->gesture_indication = true;
+                  //gpioLed0SetOn();
                   //LOG_INFO("gesture indication on\n\r");
               }
 
@@ -786,16 +844,16 @@ void handle_ble_event(sl_bt_msg_t *evt) {
 
               //check if indication flag is disabled
               if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_disable) {
-                  bleData->oximeter_indication = false;
-                  gpioLed1SetOff();
+                  //bleData->oximeter_indication = false;
+                  //gpioLed1SetOff();
                   //LOG_INFO("oximeter indication off\n\r");
 
               }
 
               //check if indication flag is enabled
               else if(evt->data.evt_gatt_server_characteristic_status.client_config_flags == gatt_indication) {
-                  bleData->oximeter_indication = true;
-                  gpioLed1SetOn();
+                  //bleData->oximeter_indication = true;
+                  //gpioLed1SetOn();
                   //LOG_INFO("oximeter indication on\n\r");
               }
 
@@ -972,12 +1030,15 @@ void handle_ble_event(sl_bt_msg_t *evt) {
           if(evt->data.evt_gatt_characteristic_value.characteristic == bleData->gesture_char_handle) {
                     //LOG_INFO("Got gesture indication\n\r");
                           if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x01) {
+                              bleData->gesture_value = 0x01;
                               displayPrintf(DISPLAY_ROW_9, "Gesture = LEFT");
                           }
                           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x02){
+                              bleData->gesture_value = 0x02;
                               displayPrintf(DISPLAY_ROW_9, "Gesture = RIGHT");
                           }
                           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x03){
+                              bleData->gesture_value = 0x03;
                                               displayPrintf(DISPLAY_ROW_9, "Gesture = UP");
                                           }
                           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x04){
@@ -989,7 +1050,7 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                           else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x06){
                                               displayPrintf(DISPLAY_ROW_9, "Gesture = FAR");
                                           }
-                          else {
+                          else if(evt->data.evt_gatt_characteristic_value.value.data[0] == 0x00){
                               displayPrintf(DISPLAY_ROW_9, "Gesture = NONE");
                           }
 
@@ -1000,6 +1061,19 @@ void handle_ble_event(sl_bt_msg_t *evt) {
                               displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
                           }
                 }
+      }
+
+      if(evt->data.evt_gatt_characteristic_value.characteristic == bleData->oximeter_char_handle) {
+
+              //LOG_INFO("Does it get oximeter indications?\n\r");
+
+              if(bleData->gesture_value == 0x01){
+                  displayPrintf(DISPLAY_ROW_TEMPVALUE, "Oxygen level: %d", evt->data.evt_gatt_characteristic_value.value.data[0]);
+              }
+
+              else if(bleData->gesture_value == 0x02){
+                  displayPrintf(DISPLAY_ROW_TEMPVALUE, "Heart rate: %d", evt->data.evt_gatt_characteristic_value.value.data[0]);
+              }
       }
 
 

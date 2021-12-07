@@ -11,10 +11,14 @@
 
 #include "app.h"
 #include "src/scheduler.h"
+#include "pulse_oximeter.h"
 
 uint32_t MyEvent;
 
 sl_status_t rc=0;
+int pulse_data_count=0;
+
+uint8_t read_device_mode[2] = {0x02, 0x00};  //send this command to begin the communication with pulse oximeter
 
 #if !DEVICE_IS_BLE_SERVER
 // Health Thermometer service UUID defined by Bluetooth SIG
@@ -55,7 +59,6 @@ enum {
   evt_ButtonPressed,
   evt_ButtonReleased,
   evt_GestureInt,
-  evt_GotGesture,
 };
 
 //enum to define scheduler events
@@ -81,6 +84,24 @@ typedef enum uint32_t {
   state4_wait_for_close,
   state0_gesture_wait,
   state1_gesture,
+  //server state machine
+  state_no_gesture,
+  //for oximeter state machine
+  state_pulse_sensor_init,
+  state_wait_10ms,
+  state_wait_1s,
+  state_read_return_check,
+  state_set_output_mode,
+  state_setFifoThreshold,
+  state_agcAlgoControl,
+  state_max30101Control,
+  state_maximFastAlgoControl,
+  state_readAlgoSamples,
+  state_wait_before_reading,
+  state_read_sensor_hub_status,
+  state_numSamplesOutFifo,
+  state_read_fill_array,
+  state_pulse_done,
   MY_NUM_STATES,
 }my_state;
 
@@ -172,15 +193,19 @@ void schedulerSetGestureEvent() {
 
 void handle_gesture() {
 
-  //ble_data_struct_t *bleData = getBleDataPtr();
+  ble_data_struct_t *bleData = getBleDataPtr();
 
   if ( isGestureAvailable() ) {
+      LOG_INFO("Is gesture available?\n\r");
+
       switch ( readGesture() ) {
 
         case DIR_UP:
           //LOG_INFO("DOWN\n\r");
+          bleData->gesture_value = 0x04;
           displayPrintf(DISPLAY_ROW_9, "Gesture = DOWN");
           disableGestureSensor();
+          bleData->gesture_on = false;
           displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
           //LOG_INFO("Sending down gesture\n\r");
           ble_SendGestureState(0x04);
@@ -189,6 +214,7 @@ void handle_gesture() {
 
         case DIR_DOWN:
           //LOG_INFO("UP\n\r");
+          bleData->gesture_value = 0x03;
           displayPrintf(DISPLAY_ROW_9, "Gesture = UP");
           //LOG_INFO("Sending up gesture\n\r");
           ble_SendGestureState(0x03);
@@ -198,6 +224,7 @@ void handle_gesture() {
 
         case DIR_LEFT:
           //LOG_INFO("LEFT\n\r");
+          bleData->gesture_value = 0x01;
           displayPrintf(DISPLAY_ROW_9, "Gesture = LEFT");
           //LOG_INFO("Sending left gesture\n\r");
           ble_SendGestureState(0x01);
@@ -207,8 +234,8 @@ void handle_gesture() {
 
         case DIR_RIGHT:
           //LOG_INFO("RIGHT\n\r");
+          bleData->gesture_value = 0x02;
           displayPrintf(DISPLAY_ROW_9, "Gesture = RIGHT");
-
           // LOG_INFO("Sending right gesture\n\r");
           ble_SendGestureState(0x02);
 
@@ -217,8 +244,8 @@ void handle_gesture() {
 
         case DIR_NEAR:
           //LOG_INFO("NEAR\n\r");
+          bleData->gesture_value = 0x05;
           displayPrintf(DISPLAY_ROW_9, "Gesture = NEAR");
-
           // LOG_INFO("Sending near gesture\n\r");
           ble_SendGestureState(0x05);
 
@@ -227,6 +254,7 @@ void handle_gesture() {
 
         case DIR_FAR:
           //LOG_INFO("FAR\n\r");
+          bleData->gesture_value = 0x06;
           displayPrintf(DISPLAY_ROW_9, "Gesture = FAR");
 
           //LOG_INFO("Sending far gesture\n\r");
@@ -237,7 +265,9 @@ void handle_gesture() {
 
         default:
           //LOG_INFO("NONE");
+          bleData->gesture_value = 0x00;
           displayPrintf(DISPLAY_ROW_9, "Gesture = NONE");
+          ble_SendGestureState(0x00);
       }
   }
 }
@@ -258,7 +288,7 @@ void gesture_state_machine(sl_bt_msg_t *evt) {
       //check for underflow event
       if(evt->data.evt_system_external_signal.extsignals == evt_GestureInt) {
 
-          //LOG_INFO("GestureInt event\n\r");
+          LOG_INFO("GestureInt event\n\r");
 
           handle_gesture();
 
@@ -280,6 +310,361 @@ void gesture_state_machine(sl_bt_msg_t *evt) {
   return;
 
 }
+
+void oximeter_state_machine(sl_bt_msg_t *evt) {
+
+  my_state currentState;
+  static my_state nextState = state_pulse_sensor_init;
+  ble_data_struct_t *bleData = getBleDataPtr();
+  bool gesture_check =false;
+
+    currentState = nextState;     //set current state of the process
+
+    switch(currentState) {
+            case state_pulse_sensor_init:
+
+              //setting MFIO and RESET as output, reset is set and mfio is cleared
+              pulse_oximeter_init_pins();
+
+              //clear the reset in and set the MFIO pin
+              turn_off_reset();
+
+              //Set the MFIO pin
+              turn_on_mfio();
+
+              //wait 10ms
+              timerWaitUs_interrupt(10000);
+
+              nextState = state_wait_10ms;
+
+              break;
+
+            case state_wait_10ms:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                //set reset pin
+                turn_on_reset();
+
+                //wait for 1 second
+                timerWaitUs_interrupt(1000000);
+
+                nextState = state_wait_1s;
+              }
+
+              break;
+
+            case state_wait_1s:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                //set MFIO pin as an interrupt
+                set_MFIO_interrupt();
+
+                //settings for putting the device into read mode
+                I2C_pulse_write_polled(read_device_mode, 2);
+
+                //wait for 10ms before performing a read
+                timerWaitUs_interrupt(6000);
+
+                nextState = state_read_return_check;
+              }
+
+              break;
+
+            case state_read_return_check:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                  //perform read to check the return value
+                  I2C_pulse_read_polled();
+
+                  //perform read to check if it returns 0
+                  read_return_check();
+
+                  //set the output mode
+                  set_output_mode_func();
+
+                  //wait for 6ms between a write and a read
+                  timerWaitUs_interrupt(6000);
+
+                  nextState = state_set_output_mode;
+              }
+
+              break;
+
+            case state_set_output_mode:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                 //perform read to check the return value
+                  I2C_pulse_read_polled();
+
+                  //perform read to check if it returns 0
+                  read_return_check();
+
+                  //set the fifo threshold
+                  setFifoThreshold_func();
+
+                  //wait for 6ms before performing a read
+                  timerWaitUs_interrupt(6000);
+
+                  nextState = state_setFifoThreshold;
+              }
+
+              break;
+
+            case state_setFifoThreshold:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                  //LOG_INFO("In state_setFifoThreshold!!\n\r");
+
+                  //wait for 100ms before performing red
+                  //NOTE:This is set to match the timings as per the arduino code provided in Github
+                  timerWaitUs_polled(100000);
+
+                  //perform read to check the return value
+                   I2C_pulse_read_polled();
+
+                   //perform read to check if it returns 0
+                   read_return_check();
+
+                   //agc algo control commands
+                   agcAlgoControl_func();
+
+                   //wait for 6ms before performing a read
+                   timerWaitUs_interrupt(6000);
+
+                   nextState = state_agcAlgoControl;
+              }
+
+              break;
+
+            case state_agcAlgoControl:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                  //LOG_INFO("In state_agcAlgoControl!!\n\r");
+
+                  //wait for 100ms before performing red
+                  //NOTE:This is set to match the timings as per the arduino code provided in Github
+                  timerWaitUs_polled(100000);
+
+                  //perform read to check the return value
+                   I2C_pulse_read_polled();
+
+                   //set the control for the sensor
+                   max30101Control_func();
+
+                   //wait for 6ms before performing a read
+                   timerWaitUs_interrupt(6000);
+
+                   nextState = state_max30101Control;
+
+              }
+
+              break;
+
+            case state_max30101Control:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                  //LOG_INFO("In state_max30101Control!!\n\r");
+                  //wait for 100ms before performing red
+                  //NOTE:This is set to match the timings as per the arduino code provided in Github
+                  timerWaitUs_polled(100000);
+
+                  //perform read to check the return value
+                   I2C_pulse_read_polled();
+
+                   //maximum fast algo control
+                   maximFastAlgoControl_func();
+
+                   //wait for 6ms before performing a read
+                   timerWaitUs_interrupt(6000);
+
+                   nextState = state_maximFastAlgoControl;
+
+              }
+
+              break;
+
+            case state_maximFastAlgoControl:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                  //LOG_INFO("In state_maximFastAlgoControl!!\n\r");
+                  //wait for 100ms before performing red
+                  //NOTE:This is set to match the timings as per the arduino code provided in Github
+                  timerWaitUs_polled(100000);
+
+                  //perform read to check the return value
+                   I2C_pulse_read_polled();
+
+                   //read the algo samples before taking the actual readings
+                   readAlgoSamples_func();
+
+                   //wait for 6ms before performing a read
+                   timerWaitUs_interrupt(6000);
+
+                   nextState = state_readAlgoSamples;
+
+              }
+
+              break;
+
+            case state_readAlgoSamples:
+
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+
+                  //perform read to check the return value
+                   I2C_pulse_read_polled();
+
+                   //perform read to check if it returns 0
+                   read_return_check();
+
+                   //wait 6 seconds before taking the actual reading
+                   timerWaitUs_interrupt(6000000);
+
+                   nextState = state_wait_before_reading;
+
+              }
+
+              break;
+
+            case state_wait_before_reading:
+              LOG_INFO("In state_wait_before_reading\n\r");
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                  //read the sensor status
+                   read_sensor_hub_status_func();
+
+                   //wait 6 seconds before taking the actual reading
+                   timerWaitUs_interrupt(6000);
+
+                   nextState = state_read_sensor_hub_status;
+
+              }
+
+              else if(!bleData->oximeter_off){
+
+                  LOG_INFO("In else if of state_wait_before_reading\n\r");
+                  //read the sensor status
+                   read_sensor_hub_status_func();
+
+                   //wait 6 seconds before taking the actual reading
+                   timerWaitUs_interrupt(6000);
+
+                   nextState = state_read_sensor_hub_status;
+              }
+
+              break;
+
+            case state_read_sensor_hub_status:
+
+                  if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                        //read for checking the return value
+                        I2C_pulse_read_polled();
+
+                        //perform read to check if it returns 0
+                        read_return_check();
+
+                        //number of samples out of the fifo
+                        numSamplesOutFifo_func();
+
+                        //wair for 6ms before performing a read
+                        timerWaitUs_interrupt(6000);
+
+                         nextState = state_numSamplesOutFifo;
+                  }
+
+              break;
+
+            case state_numSamplesOutFifo:
+
+                if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                    //perform a read to check the return value
+                    I2C_pulse_read_polled();
+
+                    //perform read to check if it returns 0
+                    read_return_check();
+
+                    //start reading sesnor data by sending read commands
+                    read_fill_array_func();
+
+                    //wair for 6ms before performing a read
+                    timerWaitUs_interrupt(6000);
+
+                     nextState = state_read_fill_array;
+
+                }
+
+              break;
+
+            case state_read_fill_array:
+
+                if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                    //read the actual data
+                    I2C_pulse_read_polled();
+
+                    //read 15 values to give sensor time to acquire appropriate values
+                      if(pulse_data_count <1){
+
+                          //stop after 15 counts
+                          pulse_data_count = extract_data();
+
+                          //read after every second
+                          timerWaitUs_interrupt(1000000);
+
+                          nextState = state_wait_before_reading;
+                      }
+
+                      else{
+                          bleData->oximeter_off = true;
+                          //gesture_check = enableGestureSensor(true);
+//                          LOG_INFO("gesture_check:%d\n\r",gesture_check);
+                          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
+//                          turn_off_reset();
+//                          GPIO_IntDisable((uint32_t)4);
+                          pulse_data_count = 0;
+                          bleData->gesture_value = 0x00;
+                          bleData->gesture_on = true;
+                          nextState = state_wait_before_reading;
+
+                      }
+
+                }
+
+              break;
+
+            case state_pulse_done:
+              LOG_INFO("In state_pulse_done\n\r");
+                  if(bleData->oximeter_off == true){
+                      LOG_INFO("condition true!!\n\r");
+//                      nextState = state_pulse_sensor_init;
+                      nextState = state_wait_before_reading;
+                  }
+                  else{
+                      LOG_INFO("condition false!!\n\r");
+                      nextState = state_pulse_done;
+                  }
+              break;
+
+            default:
+              LOG_INFO("Something wrong!! In the default state of oximeter state machine");
+
+              break;
+
+      }
+    return;
+}
+
+
 //for server only
 //state machine to be executed
 void temperature_state_machine(sl_bt_msg_t *evt) {
@@ -389,6 +774,10 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
 
               //send temperature indication to client
               ble_SendTemp();
+              bleData->gesture_value = 0x00;
+                                        bleData->gesture_on = true;
+                                        enableGestureSensor(true);
+                                        displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
 
               nextState = state0_idle;
           }
@@ -405,6 +794,7 @@ void temperature_state_machine(sl_bt_msg_t *evt) {
   }
   return;
 }
+
 
 #else
 

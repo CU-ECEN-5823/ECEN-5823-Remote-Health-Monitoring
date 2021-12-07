@@ -89,15 +89,21 @@ typedef struct {
   //button characteristic handle
   uint16_t button_char_handle;
 
-  //button service handle
+  //gesture service handle
   uint32_t gesture_service_handle;
-  //button characteristic handle
+  //gesture characteristic handle
   uint16_t gesture_char_handle;
+  //gesture value
+  uint8_t gesture_value;
+  //gesture on
+  bool gesture_on;
 
   //button service handle
   uint32_t oximeter_service_handle;
   //button characteristic handle
   uint16_t oximeter_char_handle;
+  //turn off oximeter sensor
+  bool oximeter_off;
 
 
 } ble_data_struct_t;
@@ -111,6 +117,8 @@ void ble_SendTemp();
 void ble_SendButtonState(uint8_t value);
 
 void ble_SendGestureState(uint8_t value);
+
+void ble_SendOximeterState(uint8_t* pulse_data);
 
 #endif
 

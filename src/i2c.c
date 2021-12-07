@@ -10,12 +10,27 @@
 
 #include "src/i2c.h"
 #include "app.h"
+#include "pulse_oximeter.h"
+#include "src/ble.h"
 
 #define SI7021_DEVICE_ADDR 0x40
 #define APDS9960_DEVICE_ADDR 0x39
+#define PULSE_OXIMETER 0x55
 
 uint8_t read_data[2];
 I2C_TransferSeq_TypeDef transfer_seq;
+
+/******************************************************PULSE OXIMETER VARIABLES**************************************************/
+
+  uint8_t pulse_data[8];
+  uint16_t heartRate[20]; // LSB = 0.1bpm
+  uint8_t  confidence; // 0-100% LSB = 1%
+  uint16_t oxygen[20]; // 0-100% LSB = 1%
+  uint8_t  status=0; // 0: Success, 1: Not Ready, 2: Object Detectected, 3: Finger Detected
+  uint8_t send_oximeter_data[2];
+  int i=0;
+  uint8_t max_heart_rate=0;
+  uint8_t max_oxygen=0;
 
 
 void i2c_init() {
@@ -174,6 +189,47 @@ void read_cmd() {
   }
 }
 
+
+void I2C_pulse_write_polled(uint8_t* command, int array_len){
+  I2C_TransferReturn_TypeDef transferStatus;    // used to store the transfer status
+
+  i2c_init();
+                                   //Provide command to perform measurement
+  transfer_seq.addr = PULSE_OXIMETER << 1;        //shift device address left
+  transfer_seq.flags = I2C_FLAG_WRITE;                //write command
+  transfer_seq.buf[0].data = command;               //pointer to data to write
+  transfer_seq.buf[0].len = array_len;
+
+  transferStatus = I2CSPM_Transfer (I2C0, &transfer_seq); //check the status of this operation
+
+  if (transferStatus < 0) {
+  LOG_ERROR("I2C_TransferInit() Write error = %d", transferStatus);
+  }
+
+}
+
+
+void I2C_pulse_read_polled(){
+
+  I2C_TransferReturn_TypeDef transferStatus;    // used to store the transfer status
+
+  i2c_init();
+
+  //set the transfer sequence for read
+  transfer_seq.addr = PULSE_OXIMETER << 1;        //shift device address left
+  transfer_seq.flags = I2C_FLAG_READ;                 //read command
+  transfer_seq.buf[0].data = pulse_data;               //pointer to data to write
+  transfer_seq.buf[0].len = sizeof(pulse_data);
+
+  transferStatus = I2CSPM_Transfer (I2C0, &transfer_seq);//check the status of this operation
+
+  if (transferStatus < 0) {
+  LOG_ERROR("I2C_TransferInit() Write error = %d", transferStatus);
+  }
+
+}
+
+
 //function to convert data read from sensor into temperature value in Celcius
 float convertTemp() {
 
@@ -186,3 +242,93 @@ float convertTemp() {
   tempCelcius -= 46.85;
   return tempCelcius;
 }
+
+//***********************************************OXIMETER_DATA_EXTRACT*************************************************//
+
+void read_return_check(){
+  if(pulse_data[0] == 0x00){
+      //LOG_INFO("Return value check successfull\n\r");
+  }
+  else{
+      LOG_ERROR("Pulse oximeter sensor initialization error!!\n\r");
+  }
+}
+
+int extract_data(){
+
+  ble_data_struct_t *bleData = getBleDataPtr();
+  status = pulse_data[6];
+
+    if(status == 3){
+
+        displayPrintf(DISPLAY_ROW_8, "Do not lift finger!");
+        displayPrintf(DISPLAY_ROW_TEMPVALUE, "Loading: %d", (20 - i));
+
+        heartRate[i] = ((uint16_t)(pulse_data[1])) << 8;
+        heartRate[i] |= pulse_data[2];
+        heartRate[i] = heartRate[i]/10;
+
+        confidence = pulse_data[3];
+
+        oxygen[i] = ((uint16_t)(pulse_data[4])) << 8;
+        oxygen[i] |= pulse_data[5];
+        oxygen[i] = oxygen[i]/10;
+
+        LOG_INFO("heart_rate = %d\n\r", heartRate[i]);
+        LOG_INFO("confidence = %d\n\r", confidence);
+        LOG_INFO("oxygen level = %d\n\r", oxygen[i]);
+        LOG_INFO("status = %d\n\n\r", status);
+
+        i++;
+    }
+    else{
+        LOG_INFO("Please place the finger correctly!!\n\n\r");
+
+        displayPrintf(DISPLAY_ROW_8,"Place finger!");
+    }
+
+    if(i==20){
+        max_heart_rate= heartRate[0];
+        max_oxygen= oxygen[0];
+
+        for(int j=0;j<i;j++){
+           if(max_heart_rate < heartRate[j]){
+               max_heart_rate = (uint8_t)heartRate[j];
+           }
+
+           if(max_oxygen < oxygen[j]){
+               max_oxygen = (uint8_t)oxygen[j];
+           }
+        }
+
+        LOG_INFO("***************************************FINAL VALUES**********************************************\n\r");
+        LOG_INFO("heart_rate = %d\n\r", max_heart_rate);
+        LOG_INFO("oxygen level = %d\n\r", max_oxygen);
+
+        displayPrintf(DISPLAY_ROW_8, "");
+
+        if(bleData->gesture_value==0x01){
+            send_oximeter_data[0] = max_oxygen;
+            send_oximeter_data[1] = 0;
+            displayPrintf(DISPLAY_ROW_TEMPVALUE, "Oxygen level: %d",max_oxygen);
+        }
+        if(bleData->gesture_value==0x02){
+            send_oximeter_data[0] = max_heart_rate;
+            send_oximeter_data[1] = 0;
+            displayPrintf(DISPLAY_ROW_TEMPVALUE, "Heart rate: %d",max_heart_rate);
+        }
+
+        ble_SendOximeterState(send_oximeter_data);
+
+    }
+
+    if(i==20){
+        i=0;
+      return 1;
+    }
+    else{
+      return 0;
+    }
+
+}
+

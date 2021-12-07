@@ -25,7 +25,7 @@
 #define MIN_WAIT 1000
 #endif
 
-#define MAX_WAIT 3000000  //maximum wait time possible
+#define MAX_WAIT 6000000  //maximum wait time possible
 
 //structure to define parameters for LETIMER
 const LETIMER_Init_TypeDef LETIMER_INIT_STRUCT = {

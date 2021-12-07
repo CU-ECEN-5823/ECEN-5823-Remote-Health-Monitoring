@@ -34,6 +34,14 @@ uint32_t write_write(uint8_t reg, uint8_t data);
 
 int ReadDataBlock(uint8_t reg, uint8_t *data, uint8_t length);
 
+void I2C_pulse_write_polled(uint8_t* command, int array_len);
+
+void I2C_pulse_read_polled();
+
+void read_return_check();
+
+int extract_data();
+
 //function to read temperature from sensor
 void read_cmd();
 
