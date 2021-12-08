@@ -34,6 +34,8 @@ uint8_t readAlgoSamples[3] = {0x51, 0x00, 0x03};
 uint8_t read_sensor_hub_status[2] = {0x00, 0x00};
 uint8_t numSamplesOutFifo[2] = {0x12, 0x00};
 uint8_t read_fill_array[2] = {0x12, 0x01};
+uint8_t disable_AFE[3] = {0x44, 0x03, 00};
+uint8_t disable_algo[3] = {0x52, 0x02, 0x00};
 
 
 void pulse_oximeter_init_pins(){
@@ -125,4 +127,12 @@ void numSamplesOutFifo_func(){
 void read_fill_array_func(){
 
   I2C_pulse_write_polled(read_fill_array, 2);
+}
+
+void disable_AFE_func(){
+  I2C_pulse_write_polled(disable_AFE,3);
+}
+
+void disable_algo_func(){
+  I2C_pulse_write_polled(disable_algo,3);
 }

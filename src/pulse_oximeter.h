@@ -47,4 +47,8 @@ void numSamplesOutFifo_func();
 
 void read_fill_array_func();
 
+void disable_AFE_func();
+
+void disable_algo_func();
+
 #endif /* SRC_PULSE_OXIMETER_H_ */

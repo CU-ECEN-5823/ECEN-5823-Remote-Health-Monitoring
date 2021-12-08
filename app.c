@@ -200,7 +200,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
           //disableGestureSensor();
           //          bleData->gesture_on = false;
           //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
-          //bleData->oximeter_off = false;
+          bleData->oximeter_off = false;
           oximeter_state_machine(evt);
       }
 

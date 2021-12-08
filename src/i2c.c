@@ -24,9 +24,9 @@ I2C_TransferSeq_TypeDef transfer_seq;
 /******************************************************PULSE OXIMETER VARIABLES**************************************************/
 
   uint8_t pulse_data[8];
-  uint16_t heartRate[20]; // LSB = 0.1bpm
+  uint16_t heartRate[10]; // LSB = 0.1bpm
   uint8_t  confidence; // 0-100% LSB = 1%
-  uint16_t oxygen[20]; // 0-100% LSB = 1%
+  uint16_t oxygen[10]; // 0-100% LSB = 1%
   uint8_t  status=0; // 0: Success, 1: Not Ready, 2: Object Detectected, 3: Finger Detected
   uint8_t send_oximeter_data[2];
   int i=0;
@@ -280,7 +280,7 @@ int extract_data(){
     if(status == 3){
 
         displayPrintf(DISPLAY_ROW_ACTION, "Do not lift finger!");
-        displayPrintf(DISPLAY_ROW_TEMPVALUE, "Loading: %d", (20 - i));
+        displayPrintf(DISPLAY_ROW_TEMPVALUE, "Loading: %d", (10 - i));
 
         heartRate[i] = ((uint16_t)(pulse_data[1])) << 8;
         heartRate[i] |= pulse_data[2];
@@ -305,7 +305,7 @@ int extract_data(){
         displayPrintf(DISPLAY_ROW_ACTION,"Place finger!");
     }
 
-    if(i==20){
+    if(i==10){
         max_heart_rate= heartRate[0];
         max_oxygen= oxygen[0];
 
@@ -340,7 +340,7 @@ int extract_data(){
 
     }
 
-    if(i==20){
+    if(i==10){
         i=0;
       return 1;
     }

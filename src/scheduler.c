@@ -101,6 +101,8 @@ typedef enum uint32_t {
   state_read_sensor_hub_status,
   state_numSamplesOutFifo,
   state_read_fill_array,
+  state_disable_AFE,
+  state_disable_algo,
   state_pulse_done,
   MY_NUM_STATES,
 }my_state;
@@ -206,7 +208,7 @@ void handle_gesture() {
           displayPrintf(DISPLAY_ROW_9, "Gesture = DOWN");
           disableGestureSensor();
           bleData->gesture_on = false;
-          displayPrintf(DISPLAY_ROW_10, "Gesture sensor OFF");
+          displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor OFF");
           //LOG_INFO("Sending down gesture\n\r");
           ble_SendGestureState(0x04);
 
@@ -322,8 +324,9 @@ void oximeter_state_machine(sl_bt_msg_t *evt) {
     currentState = nextState;     //set current state of the process
 
     switch(currentState) {
-            case state_pulse_sensor_init:
 
+            case state_pulse_sensor_init:
+              LOG_INFO("In state_pulse_sensor_init\n\r");
               //setting MFIO and RESET as output, reset is set and mfio is cleared
               pulse_oximeter_init_pins();
 
@@ -627,15 +630,9 @@ void oximeter_state_machine(sl_bt_msg_t *evt) {
 
                       else{
                           bleData->oximeter_off = true;
-                          //gesture_check = enableGestureSensor(true);
-//                          LOG_INFO("gesture_check:%d\n\r",gesture_check);
-                          //displayPrintf(DISPLAY_ROW_ACTION, "Gesture sensor ON");
-//                          turn_off_reset();
-//                          GPIO_IntDisable((uint32_t)4);
                           pulse_data_count = 0;
-                          bleData->gesture_value = 0x00;
-                          //bleData->gesture_on = true;
-                          nextState = state_wait_before_reading;
+                          timerWaitUs_interrupt(6000);
+                          nextState = state_disable_AFE;
 
                       }
 
@@ -643,18 +640,58 @@ void oximeter_state_machine(sl_bt_msg_t *evt) {
 
               break;
 
-            case state_pulse_done:
-              LOG_INFO("In state_pulse_done\n\r");
-                  if(bleData->oximeter_off == true){
-                      LOG_INFO("condition true!!\n\r");
-//                      nextState = state_pulse_sensor_init;
-                      nextState = state_wait_before_reading;
+            case state_disable_AFE:
+              LOG_INFO("In state_disable_AFE\n\r");
+                  if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+                  //disable AFE
+                              disable_AFE_func();
+
+                              //wair for 6ms before performing a read
+                              timerWaitUs_interrupt(6000);
+
+                               nextState = state_disable_algo;
                   }
-                  else{
-                      LOG_INFO("condition false!!\n\r");
-                      nextState = state_pulse_done;
-                  }
+
               break;
+
+            case state_disable_algo:
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+
+                          //perform a read to check the return value
+                          I2C_pulse_read_polled();
+
+                          //perform read to check if it returns 0
+                          read_return_check();
+
+                          //start reading sesnor data by sending read commands
+                          disable_algo_func();
+
+                          //wair for 6ms before performing a read
+                          timerWaitUs_interrupt(6000);
+
+                           nextState = state_pulse_done;
+
+                    }
+              break;
+
+           case state_pulse_done:
+              if(evt->data.evt_system_external_signal.extsignals == evt_COMP1){
+                            //perform a read to check the return value
+                            I2C_pulse_read_polled();
+
+                            //perform read to check if it returns 0
+                            read_return_check();
+
+                            nextState = state_pulse_done;
+              }
+              else if(!bleData->oximeter_off){
+                  bleData->gesture_value = 0x00;
+                  bleData->gesture_on = true;
+                  nextState = state_pulse_sensor_init;
+              }
+
+          break;
+
 
             default:
               LOG_INFO("Something wrong!! In the default state of oximeter state machine");
